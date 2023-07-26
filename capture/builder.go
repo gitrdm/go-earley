@@ -25,7 +25,7 @@ func (*Builder) Offset() int {
 	return 0
 }
 
-// Append implements Mutable.
+// Append implements Appendable
 func (b *Builder) Append(r rune) {
 	b.slice = append(b.slice, r)
 }

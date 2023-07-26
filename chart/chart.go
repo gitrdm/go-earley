@@ -1,37 +1,19 @@
 package chart
 
 import (
-	"github.com/patrickhuber/go-earley/ast"
 	"github.com/patrickhuber/go-earley/grammar"
+	"github.com/patrickhuber/go-earley/state"
 )
 
-type Chart interface {
-	Sets() []Set
-	Contains(index int, ty StateType, rule grammar.DottedRule, origin int) bool
+type Chart struct {
+	Sets []Set
 }
 
-type Set interface {
-	Predictions() []State
-	Scans() []State
-	Completions() []State
-	Transitions() []Transition
-	Location() int
-	Enqueue(state State) bool
+func New() *Chart {
+	return &Chart{}
 }
 
-type State interface {
-	DottedRule() grammar.DottedRule
-	Origin() int
-	Node() ast.Node
-	Type() StateType
+func (c *Chart) Contains(index int, ty state.Type, rule *grammar.DottedRule, origin int) bool {
+	set := c.Sets[index]
+	return set.Contains(ty, rule, origin)
 }
-
-type Transition interface {
-}
-
-type StateType int
-
-const (
-	NormalStateType     StateType = 0
-	TransitionStateType StateType = 1
-)

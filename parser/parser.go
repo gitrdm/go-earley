@@ -3,6 +3,7 @@ package parser
 import (
 	"github.com/patrickhuber/go-earley/chart"
 	"github.com/patrickhuber/go-earley/grammar"
+	"github.com/patrickhuber/go-earley/state"
 	"github.com/patrickhuber/go-earley/token"
 )
 
@@ -16,20 +17,38 @@ type Parser interface {
 type parser struct {
 	location    int
 	dottedRules grammar.RuleRegistry
-	grammar     grammar.Grammar
-	chart       chart.Chart
+	grammar     *grammar.Grammar
+	chart       *chart.Chart
 }
 
-func New(g grammar.Grammar) Parser {
+func New(g *grammar.Grammar) Parser {
 	return &parser{
 		grammar: g,
+		chart:   chart.New(),
 	}
+}
+
+func (p *parser) initialize() {
+	p.location = 0
+	p.chart = chart.New()
+	start := p.grammar.Start
+
+	for s := 0; s < len(start); s++ {
+		production := start[s]
+		state := state.NewNormal(production, position, origin)
+		p.chart.Enqueue(0, startState)
+	}
+	p.reductionPass(p.location)
+}
+
+func (p *parser) NewState(production grammar.Production, position int, origin int) state.State{
+
 }
 
 func (p *parser) Pulse(tok token.Token) (bool, error) {
 	p.scanPass(p.Location(), tok)
 
-	tokenRecognized := len(p.chart.Sets()) > p.Location()+1
+	tokenRecognized := len(p.chart.Sets) > p.Location()+1
 	if !tokenRecognized {
 		return false, nil
 	}
@@ -41,15 +60,15 @@ func (p *parser) Pulse(tok token.Token) (bool, error) {
 }
 
 func (p *parser) scanPass(location int, tok token.Token) {
-	set := p.chart.Sets()[location]
-	for _, s := range set.Scans() {
+	set := p.chart.Sets[location]
+	for _, s := range set.Scans {
 		p.scan(s, location, tok)
 	}
 }
 
-func (p *parser) scan(state chart.State, j int, tok token.Token) {
+func (p *parser) scan(s state.State, j int, tok token.Token) {
 
-	sym := grammar.PostDotSymbol(state.DottedRule())
+	sym := s.DottedRule().PostDotSymbol()
 
 	// process lexer rules
 	lexRule, ok := sym.(grammar.LexerRule)
@@ -63,9 +82,9 @@ func (p *parser) scan(state chart.State, j int, tok token.Token) {
 	}
 
 	// grab the next dotted rule from the registry
-	rule := p.dottedRules.Next(state.DottedRule())
-	i := state.Origin()
-	if p.chart.Contains(j+1, chart.NormalStateType, rule, i) {
+	rule := p.dottedRules.Next(s.DottedRule())
+	i := s.Origin()
+	if p.chart.Contains(j+1, state.NormalType, rule, i) {
 		return
 	}
 }

@@ -1,41 +1,43 @@
 package grammar
 
-type DottedRule interface {
-	Production() Production
-	Position() int
+type DottedRule struct {
+	Production Production
+	Position   int
+	preDot     Symbol
+	postDot    Symbol
 }
 
-type dottedRule struct {
-	production Production
-	position   int
-}
-
-func (d *dottedRule) Production() Production {
-	return d.production
-}
-
-func (d *dottedRule) Position() int {
-	return d.position
-}
-
-func NewDottedRule(production Production, position int) DottedRule {
-	return &dottedRule{
-		production: production,
-		position:   position,
+func NewDottedRule(production Production, position int) *DottedRule {
+	return &DottedRule{
+		Production: production,
+		Position:   position,
 	}
 }
 
-func PreDotSymbol(rule DottedRule) Symbol {
-	if rule.Position() == 0 || len(rule.Production().RightHandSide()) == 0 {
+func (dr *DottedRule) Complete() bool {
+	return dr.Position >= len(dr.Production.RightHandSide())
+}
+
+func (dr *DottedRule) PreDotSymbol() Symbol {
+	if dr.preDot != nil {
+		return dr.preDot
+	}
+
+	if dr.Position == 0 || len(dr.Production.RightHandSide()) == 0 {
 		return nil
 	}
-	return rule.Production().RightHandSide()[rule.Position()]
+	dr.preDot = dr.Production.RightHandSide()[dr.Position]
+	return dr.preDot
 }
 
-func PostDotSymbol(rule DottedRule) Symbol {
-	rhs := rule.Production().RightHandSide()
-	if rule.Position() >= len(rhs) {
+func (dr *DottedRule) PostDotSymbol() Symbol {
+	if dr.postDot != nil {
+		return dr.postDot
+	}
+	rhs := dr.Production.RightHandSide()
+	if dr.Position >= len(rhs) {
 		return nil
 	}
-	return rhs[rule.Position()]
+	dr.postDot = rhs[dr.Position]
+	return dr.postDot
 }
