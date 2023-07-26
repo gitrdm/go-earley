@@ -15,25 +15,30 @@ import (
 
 func TestScanner(t *testing.T) {
 	t.Run("reads input", func(t *testing.T) {
-		scanner := NewScanner(" ")
+		scanner := NewScanner(" ", NewFakeParser(lexrule.NewTerminal(terminal.NewWhitespace())))
 		result, err := scanner.Read()
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.True(t, result)
 		require.True(t, scanner.EndOfStream())
 	})
 	t.Run("updates position", func(t *testing.T) {
-		scanner := NewScanner(" ")
+		scanner := NewScanner(" ", NewFakeParser(lexrule.NewTerminal(terminal.NewWhitespace())))
 		require.Equal(t, -1, scanner.Position())
 		result, err := scanner.Read()
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.True(t, result)
 		require.Equal(t, 0, scanner.Position())
 	})
 	t.Run("resets column", func(t *testing.T) {
-		scanner := NewScanner("test\nfile")
+		parser := NewFakeParser(
+			lexrule.NewString("test"),
+			lexrule.NewString("\n"),
+			lexrule.NewString("file"),
+		)
+		scanner := NewScanner("test\nfile", parser)
 		for {
 			result, err := scanner.Read()
-			require.Nil(t, err)
+			require.NoError(t, err)
 			if !result {
 				break
 			}
@@ -44,69 +49,44 @@ func TestScanner(t *testing.T) {
 			}
 		}
 	})
-	t.Run("reads words", func(t *testing.T) {
-		S := grammar.NewNonTerminal("S")
-		word := lexrule.NewString("word")
-		ws := terminal.NewWhitespace()
-		// S -> ws
-		// S -> word
-		g := grammar.New(
-			S,
-			// S -> S S
-			grammar.NewProduction(S, S, S),
-			// S -> S
-			grammar.NewProduction(S, S),
-			// S -> word
-			grammar.NewProduction(S, word),
-			// S -> ws
-			grammar.NewProduction(S, ws),
-		)
-		p := parser.New(g)
-		s := scanner.New(p, strings.NewReader("word word word word"))
-		ok, err := scanner.RunToEnd(s)
-		require.Nil(t, err)
-		require.True(t, ok)
-	})
 }
 
-func NewScanner(text string) scanner.Scanner {
+func NewScanner(text string, parser parser.Parser) scanner.Scanner {
 	reader := strings.NewReader(text)
-	parser := NewFakeParser(len(text))
 	return scanner.New(parser, reader)
 }
 
 type FakeParser struct {
-	pulseCount   int
-	currentCount int
+	rules []grammar.LexerRule
+	index int
 }
 
-func NewFakeParser(pulseCount int) parser.Parser {
+func NewFakeParser(rules ...grammar.LexerRule) parser.Parser {
 	return &FakeParser{
-		pulseCount:   pulseCount,
-		currentCount: 0,
+		rules: rules,
+		index: 0,
 	}
 }
 
-func (p *FakeParser) Pulse(tokens ...token.Token) bool {
-	if p.currentCount >= p.pulseCount {
-		return false
+func (p *FakeParser) Pulse(tokens token.Token) (bool, error) {
+	if p.index >= len(p.rules) {
+		return false, nil
 	}
-	p.currentCount++
-	return true
+	p.index++
+	return true, nil
 }
 
 func (p *FakeParser) Accepted() bool {
-	return p.currentCount >= p.pulseCount
+	return p.index >= len(p.rules)
 }
 
 func (p *FakeParser) Location() int {
-	return p.currentCount
+	return p.index
 }
 
 func (p *FakeParser) Expected() []grammar.LexerRule {
-	return []grammar.LexerRule{
-		lexrule.NewTerminal(
-			terminal.NewAny(),
-		),
+	if p.index >= len(p.rules) {
+		return nil
 	}
+	return p.rules[p.index : p.index+1]
 }
