@@ -18,8 +18,8 @@ func NewNormal(rule *grammar.DottedRule, origin int) *Normal {
 }
 
 type Normal struct {
-	DottedRule *grammar.DottedRule
 	Origin     int
+	DottedRule *grammar.DottedRule
 	Node       ast.Node
 }
 

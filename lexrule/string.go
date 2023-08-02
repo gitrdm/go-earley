@@ -8,36 +8,27 @@ const (
 	StringType = "string"
 )
 
-type String interface {
-	grammar.LexerRule
-	Value() []rune
-}
-
-type stringLiteral struct {
-	runes []rune
+type String struct {
+	Value string
 	grammar.SymbolImpl
 }
 
 // CanApply implements String.
-func (s *stringLiteral) CanApply(ch rune) bool {
-	for _, r := range s.runes {
+func (s *String) CanApply(ch rune) bool {
+	for _, r := range s.Value {
 		return r == ch
 	}
+	// empty case
 	return false
 }
 
 // ID implements String.
-func (s *stringLiteral) Type() string {
+func (s *String) Type() string {
 	return StringType
 }
 
-// Value implements String.
-func (s *stringLiteral) Value() []rune {
-	return s.runes
-}
-
-func NewString(str string) String {
-	return &stringLiteral{
-		runes: []rune(str),
+func NewString(str string) *String {
+	return &String{
+		Value: str,
 	}
 }

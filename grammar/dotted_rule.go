@@ -1,13 +1,13 @@
 package grammar
 
 type DottedRule struct {
-	Production Production
+	Production *Production
 	Position   int
 	preDot     Symbol
 	postDot    Symbol
 }
 
-func NewDottedRule(production Production, position int) *DottedRule {
+func NewDottedRule(production *Production, position int) *DottedRule {
 	return &DottedRule{
 		Production: production,
 		Position:   position,
@@ -15,7 +15,7 @@ func NewDottedRule(production Production, position int) *DottedRule {
 }
 
 func (dr *DottedRule) Complete() bool {
-	return dr.Position >= len(dr.Production.RightHandSide())
+	return dr.Position >= len(dr.Production.RightHandSide)
 }
 
 func (dr *DottedRule) PreDotSymbol() Symbol {
@@ -23,10 +23,10 @@ func (dr *DottedRule) PreDotSymbol() Symbol {
 		return dr.preDot
 	}
 
-	if dr.Position == 0 || len(dr.Production.RightHandSide()) == 0 {
+	if dr.Position == 0 || len(dr.Production.RightHandSide) == 0 {
 		return nil
 	}
-	dr.preDot = dr.Production.RightHandSide()[dr.Position]
+	dr.preDot = dr.Production.RightHandSide[dr.Position]
 	return dr.preDot
 }
 
@@ -34,7 +34,7 @@ func (dr *DottedRule) PostDotSymbol() Symbol {
 	if dr.postDot != nil {
 		return dr.postDot
 	}
-	rhs := dr.Production.RightHandSide()
+	rhs := dr.Production.RightHandSide
 	if dr.Position >= len(rhs) {
 		return nil
 	}

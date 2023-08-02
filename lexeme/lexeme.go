@@ -1,7 +1,6 @@
 package lexeme
 
 import (
-	"github.com/patrickhuber/go-earley/capture"
 	"github.com/patrickhuber/go-earley/token"
 )
 
@@ -14,19 +13,19 @@ type Lexeme interface {
 }
 
 type lexeme struct {
-	capture   capture.Capture
-	position  int
+	capture   string
+	span      *Span
 	tokenType string
 }
 
 // Capture implements Token.
-func (t *lexeme) Capture() capture.Capture {
-	return t.capture
+func (t *lexeme) Capture() string {
+	return t.capture[t.span.Offset:t.span.Length]
 }
 
 // Position implements Token.
 func (t *lexeme) Position() int {
-	return t.position
+	return t.span.Offset
 }
 
 // Type implements Token.

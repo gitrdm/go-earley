@@ -1,10 +1,8 @@
 package scanner
 
 import (
-	"bufio"
-	"io"
+	"strings"
 
-	"github.com/patrickhuber/go-earley/capture"
 	"github.com/patrickhuber/go-earley/grammar"
 	"github.com/patrickhuber/go-earley/lexeme"
 	"github.com/patrickhuber/go-earley/parser"
@@ -24,21 +22,21 @@ type scanner struct {
 	line     int
 	column   int
 	parser   parser.Parser
-	reader   *bufio.Reader
 	lexemes  []lexeme.Lexeme
-	capture  *capture.Builder
+	input    string
+	reader   *strings.Reader
 	registry map[string]lexeme.Factory
 }
 
 // New creates a new scanner from the given parser and io reader
-func New(p parser.Parser, reader io.Reader) Scanner {
+func New(p parser.Parser, input string) Scanner {
 	return &scanner{
 		parser:   p,
-		reader:   bufio.NewReader(reader),
 		position: -1,
 		line:     0,
 		column:   0,
-		capture:  capture.FromSlice(),
+		input:    input,
+		reader:   strings.NewReader(input),
 	}
 }
 
@@ -49,8 +47,8 @@ func (s *scanner) Column() int {
 
 // EndOfStream implements Scanner.
 func (s *scanner) EndOfStream() bool {
-	_, err := s.reader.Peek(1)
-	return err != nil
+	// if unread runes are zero, we are at the end
+	return s.reader.Len() == 0
 }
 
 // Line implements Scanner.
@@ -73,7 +71,7 @@ func (s *scanner) Read() (bool, error) {
 	if s.EndOfStream() {
 		return false, nil
 	}
-	ch, err := s.readRune()
+	ch, err := s.read()
 	if err != nil {
 		return false, err
 	}
@@ -95,7 +93,7 @@ func (s *scanner) Read() (bool, error) {
 		}
 	}
 
-	matched, err := s.matchesNewLexemes()
+	matched, err := s.matchesNewLexemes(ch)
 	if err != nil {
 		return false, err
 	}
@@ -117,13 +115,13 @@ func (s *scanner) Read() (bool, error) {
 	return true, nil
 }
 
-func (s *scanner) readRune() (rune, error) {
-	ch, _, err := s.reader.ReadRune()
-	var zero rune
+func (s *scanner) read() (rune, error) {
+	ch, n, err := s.reader.ReadRune()
 	if err != nil {
+		var zero rune
 		return zero, err
 	}
-	s.capture.Append(ch)
+	s.position += n
 	return ch, nil
 }
 
@@ -134,11 +132,21 @@ func (s *scanner) update(ch rune) {
 	} else {
 		s.column++
 	}
-	s.position++
 }
 
 func (s *scanner) matchesExistingLexemes() bool {
-	return false
+	if len(s.lexemes) == 0 {
+		return false
+	}
+	var matched []lexeme.Lexeme
+	for _, lexeme := range s.lexemes {
+		if lexeme.Scan() {
+			matched = append(matched, lexeme)
+		}
+	}
+
+	s.lexemes = matched
+	return len(s.lexemes) > 0
 }
 
 func (s *scanner) tryParseExistingLexemes() bool {
@@ -159,17 +167,15 @@ func (s *scanner) tryParseExistingLexemes() bool {
 }
 
 func (s *scanner) anyExistingLexemes() bool {
-	return false
+	return len(s.lexemes) > 0
 }
 
-func (s *scanner) matchesNewLexemes() (bool, error) {
-	return s.matchLexerRules(s.parser.Expected(), s.lexemes)
+func (s *scanner) matchesNewLexemes(ch rune) (bool, error) {
+	return s.matchLexerRules(ch, s.parser.Expected())
 }
 
-func (s *scanner) matchLexerRules(lexerRules []grammar.LexerRule, lexemes []lexeme.Lexeme) (bool, error) {
+func (s *scanner) matchLexerRules(ch rune, lexerRules []grammar.LexerRule) (bool, error) {
 	anyMatches := false
-
-	ch := s.capture.RuneAt(s.position)
 
 	for _, lexerRule := range lexerRules {
 		if !lexerRule.CanApply(ch) {
@@ -180,8 +186,8 @@ func (s *scanner) matchLexerRules(lexerRules []grammar.LexerRule, lexemes []lexe
 		if !ok {
 			continue
 		}
-		span := capture.SpanLength(s.capture, s.capture.Offset(), 0)
-		tok, err := factory.Create(lexerRule, span, s.position)
+
+		tok, err := factory.Create(lexerRule, s.input, s.position)
 		if err != nil {
 			return false, err
 		}

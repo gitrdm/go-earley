@@ -20,3 +20,11 @@ func NewNonTerminal(name string) NonTerminal {
 		name: name,
 	}
 }
+
+func (nt *nonTerminal) Equal(other Symbol) bool {
+	otherNonTerminal, ok := other.(NonTerminal)
+	if !ok {
+		return false
+	}
+	return nt.name == otherNonTerminal.Name()
+}

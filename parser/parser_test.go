@@ -18,8 +18,11 @@ func TestParser(t *testing.T) {
 	// S -> S S | S | 's'
 	g := grammar.New(
 		S,
+		// S -> S S
 		grammar.NewProduction(S, S, S),
+		// S -> S
 		grammar.NewProduction(S, S),
+		// S -> 's'
 		grammar.NewProduction(S, s),
 	)
 

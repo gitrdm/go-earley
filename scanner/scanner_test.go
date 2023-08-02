@@ -1,7 +1,6 @@
 package scanner_test
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/patrickhuber/go-earley/grammar"
@@ -52,8 +51,7 @@ func TestScanner(t *testing.T) {
 }
 
 func NewScanner(text string, parser parser.Parser) scanner.Scanner {
-	reader := strings.NewReader(text)
-	return scanner.New(parser, reader)
+	return scanner.New(parser, text)
 }
 
 type FakeParser struct {

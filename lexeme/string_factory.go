@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/patrickhuber/go-collections/generic/queue"
-	"github.com/patrickhuber/go-earley/capture"
 	"github.com/patrickhuber/go-earley/grammar"
 	"github.com/patrickhuber/go-earley/lexrule"
 )
@@ -14,13 +13,13 @@ type stringFactory struct {
 }
 
 // Create implements Factory.
-func (f *stringFactory) Create(lexerRule grammar.LexerRule, cap capture.Capture, offset int) (Lexeme, error) {
-	rule, ok := lexerRule.(lexrule.String)
+func (f *stringFactory) Create(lexerRule grammar.LexerRule, str string, offset int) (Lexeme, error) {
+	rule, ok := lexerRule.(*lexrule.String)
 	if !ok || lexerRule.Type() != lexrule.StringType {
 		return nil, fmt.Errorf("string factory expected lexer rule of type %s but found %s", lexrule.StringType, lexerRule.Type())
 	}
 	if f.queue.Length() == 0 {
-		return NewString(rule, cap, offset), nil
+		return NewString(rule, str, offset), nil
 	}
 	reused := f.queue.Dequeue()
 	reused.Reset(offset)

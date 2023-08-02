@@ -1,21 +1,19 @@
 package token
 
-import "github.com/patrickhuber/go-earley/capture"
-
 type Token interface {
-	Capture() capture.Capture
+	Capture() string
 	Position() int
 	Type() string
 }
 
 type token struct {
-	capture   capture.Capture
+	capture   string
 	position  int
 	tokenType string
 }
 
 // Capture implements Token.
-func (t *token) Capture() capture.Capture {
+func (t *token) Capture() string {
 	return t.capture
 }
 
@@ -31,15 +29,7 @@ func (t *token) Type() string {
 
 func FromString(value string, position int, tokenType string) Token {
 	return &token{
-		capture:   capture.FromString(value),
-		position:  position,
-		tokenType: tokenType,
-	}
-}
-
-func FromCapture(capture capture.Capture, position int, tokenType string) Token {
-	return &token{
-		capture:   capture,
+		capture:   value,
 		position:  position,
 		tokenType: tokenType,
 	}
