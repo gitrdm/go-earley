@@ -15,36 +15,18 @@ type Parser interface {
 }
 
 type parser struct {
-	location    int
-	dottedRules grammar.RuleRegistry
-	grammar     *grammar.Grammar
-	chart       *chart.Chart
+	location int
+	grammar  *grammar.Grammar
+	chart    *chart.Chart
 }
 
 func New(g *grammar.Grammar) Parser {
 	p := &parser{
-		grammar:     g,
-		chart:       chart.New(),
-		dottedRules: grammar.NewRegistry(),
+		grammar: g,
+		chart:   chart.New(),
 	}
-	p.compute(g)
 	p.initialize()
 	return p
-}
-
-func (par *parser) compute(g *grammar.Grammar) {
-	for p := range g.Productions {
-		production := g.Productions[p]
-
-		// this needs to be len(rhs)+1 because dots are between characters
-		for i := 0; i <= len(production.RightHandSide); i++ {
-			dr := &grammar.DottedRule{
-				Production: production,
-				Position:   i,
-			}
-			par.dottedRules.Register(dr)
-		}
-	}
 }
 
 func (p *parser) initialize() {
@@ -61,7 +43,7 @@ func (p *parser) initialize() {
 }
 
 func (p *parser) NewState(production *grammar.Production, position int, origin int) state.State {
-	dr, ok := p.dottedRules.Get(production, position)
+	dr, ok := p.grammar.Rules.Get(production, position)
 	if !ok {
 		panic("invalid state")
 	}
@@ -105,7 +87,7 @@ func (p *parser) scan(s *state.Normal, j int, tok token.Token) {
 	}
 
 	// grab the next dotted rule from the registry
-	rule, ok := p.dottedRules.Next(s.DottedRule)
+	rule, ok := p.grammar.Rules.Next(s.DottedRule)
 	if !ok {
 		return
 	}
@@ -180,7 +162,7 @@ func (par *parser) earleyComplete(completed *state.Normal, location int) {
 
 	for p := 0; p < count; p++ {
 		prediction := sources[p]
-		rule, ok := par.dottedRules.Next(prediction.DottedRule)
+		rule, ok := par.grammar.Rules.Next(prediction.DottedRule)
 		if !ok {
 			continue
 		}
@@ -206,14 +188,14 @@ func (par *parser) predict(evidence *state.Normal, location int) {
 		par.predictProduction(location, production)
 	}
 
-	isNullable := false // par.grammar.IsTransativeNullable(nonTerminal)
+	isNullable := par.grammar.IsTransativeNullable(nonTerminal)
 	if isNullable {
 		par.predictAycockHorspool(evidence, location)
 	}
 }
 
 func (p *parser) predictProduction(location int, production *grammar.Production) {
-	rule, ok := p.dottedRules.Get(production, 0)
+	rule, ok := p.grammar.Rules.Get(production, 0)
 	if !ok {
 		return
 	}
@@ -225,7 +207,15 @@ func (p *parser) predictProduction(location int, production *grammar.Production)
 }
 
 func (p *parser) predictAycockHorspool(evidence *state.Normal, location int) {
-	panic("not implemented")
+	next, ok := p.grammar.Rules.Next(evidence.DottedRule)
+	if !ok {
+		return
+	}
+	if p.chart.Contains(location, evidence.Type(), next, evidence.Origin) {
+		return
+	}
+	state := p.NewState(next.Production, next.Position, evidence.Origin)
+	p.chart.Enqueue(location, state)
 }
 
 func (p *parser) Location() int {

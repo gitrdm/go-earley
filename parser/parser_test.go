@@ -35,3 +35,33 @@ func TestParser(t *testing.T) {
 		require.True(t, ok, "loop %d", i)
 	}
 }
+
+func TestAycockHorspool(t *testing.T) {
+	/*
+		S' -> S
+		S  -> A A A A
+		A  -> a | E
+		E  ->
+	*/
+	SPrime := grammar.NewNonTerminal("S'")
+	S := grammar.NewNonTerminal("S")
+	A := grammar.NewNonTerminal("A")
+	E := grammar.NewNonTerminal("E")
+	a := lexrule.NewString("a")
+
+	g := grammar.New(SPrime,
+		grammar.NewProduction(SPrime, S),
+		grammar.NewProduction(S, A, A, A, A),
+		grammar.NewProduction(A, a),
+		grammar.NewProduction(A, E),
+		grammar.NewProduction(E),
+	)
+
+	p := parser.New(g)
+	tok := token.FromString("a", 0, a.Type())
+	ok, err := p.Pulse(tok)
+
+	require.NoError(t, err)
+	require.True(t, ok)
+	require.True(t, p.Accepted())
+}

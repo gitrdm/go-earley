@@ -32,3 +32,7 @@ func NewString(str string) *String {
 		Value: str,
 	}
 }
+
+func (s *String) String() string {
+	return s.Value
+}

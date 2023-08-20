@@ -147,6 +147,17 @@ func (s *Set) addUniqueCompletion(completion *state.Normal) bool {
 		return false
 	}
 	s.Completions = completions
+
+	sym := completion.DottedRule.Production.LeftHandSide
+	if s.reductions == nil {
+		s.reductions = make(map[grammar.Symbol][]*state.Normal)
+	}
+	list, ok := s.reductions[sym]
+	if !ok {
+		list = []*state.Normal{}
+	}
+	list = append(list, completion)
+	s.reductions[sym] = list
 	return true
 }
 
