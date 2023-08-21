@@ -73,7 +73,10 @@ func (p *parser) scanPass(location int, tok token.Token) {
 
 func (p *parser) scan(s *state.Normal, j int, tok token.Token) {
 
-	sym := s.DottedRule.PostDotSymbol()
+	sym, ok := s.DottedRule.PostDotSymbol().Deconstruct()
+	if !ok {
+		return
+	}
 
 	// process lexer rules
 	lexRule, ok := sym.(grammar.LexerRule)
@@ -179,7 +182,14 @@ func (par *parser) earleyComplete(completed *state.Normal, location int) {
 
 func (par *parser) predict(evidence *state.Normal, location int) {
 	rule := evidence.DottedRule
-	nonTerminal := rule.PostDotSymbol().(grammar.NonTerminal)
+	sym, ok := rule.PostDotSymbol().Deconstruct()
+	if !ok {
+		return
+	}
+	nonTerminal, ok := sym.(grammar.NonTerminal)
+	if !ok {
+		return
+	}
 	productions := par.grammar.RulesFor(nonTerminal)
 
 	count := len(productions)
@@ -247,8 +257,8 @@ func (p *parser) Expected() []grammar.LexerRule {
 
 	var expected []grammar.LexerRule
 	for _, s := range set.Scans {
-		postDot := s.DottedRule.PostDotSymbol()
-		if postDot == nil {
+		postDot, ok := s.DottedRule.PostDotSymbol().Deconstruct()
+		if !ok {
 			continue
 		}
 		lexRule, ok := postDot.(grammar.LexerRule)

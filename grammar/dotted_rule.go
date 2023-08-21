@@ -1,5 +1,10 @@
 package grammar
 
+import (
+	"github.com/patrickhuber/go-types"
+	"github.com/patrickhuber/go-types/option"
+)
+
 type DottedRule struct {
 	Production *Production
 	Position   int
@@ -18,26 +23,27 @@ func (dr *DottedRule) Complete() bool {
 	return dr.Position >= len(dr.Production.RightHandSide)
 }
 
-func (dr *DottedRule) PreDotSymbol() Symbol {
+func (dr *DottedRule) PreDotSymbol() types.Option[Symbol] {
 	if dr.preDot != nil {
-		return dr.preDot
+		return option.Some(dr.preDot)
 	}
 
-	if dr.Position == 0 || len(dr.Production.RightHandSide) == 0 {
-		return nil
+	rhs := dr.Production.RightHandSide
+	if dr.Position == 0 || len(rhs) == 0 {
+		return option.None[Symbol]()
 	}
-	dr.preDot = dr.Production.RightHandSide[dr.Position]
-	return dr.preDot
+	dr.preDot = rhs[dr.Position-1]
+	return option.Some(dr.preDot)
 }
 
-func (dr *DottedRule) PostDotSymbol() Symbol {
+func (dr *DottedRule) PostDotSymbol() types.Option[Symbol] {
 	if dr.postDot != nil {
-		return dr.postDot
+		return option.Some(dr.postDot)
 	}
 	rhs := dr.Production.RightHandSide
 	if dr.Position >= len(rhs) {
-		return nil
+		return option.None[Symbol]()
 	}
 	dr.postDot = rhs[dr.Position]
-	return dr.postDot
+	return option.Some(dr.postDot)
 }

@@ -44,8 +44,11 @@ func (s *Set) find(ty state.Type, dr *grammar.DottedRule, origin int) (state.Sta
 	if dr.Complete() {
 		return s.FindCompletion(dr, origin)
 	}
-	current := dr.PostDotSymbol()
-	_, ok := current.(grammar.NonTerminal)
+	current, ok := dr.PostDotSymbol().Deconstruct()
+	if !ok {
+		return s.FindPrediction(dr, origin)
+	}
+	_, ok = current.(grammar.NonTerminal)
 	if ok {
 		return s.FindPrediction(dr, origin)
 	}
@@ -95,7 +98,10 @@ func (s *Set) FindSourceStates(sym grammar.Symbol) []*state.Normal {
 		return states
 	}
 	for _, p := range s.Predictions {
-		postDot := p.DottedRule.PostDotSymbol()
+		postDot, ok := p.DottedRule.PostDotSymbol().Deconstruct()
+		if !ok {
+			continue
+		}
 		if postDot == sym {
 			states = append(states, p)
 		}
@@ -130,9 +136,11 @@ func (s *Set) enqueueNormal(st *state.Normal) bool {
 	if rule.Complete() {
 		return s.addUniqueCompletion(st)
 	}
-	postDot := rule.PostDotSymbol()
-	if _, ok := postDot.(grammar.NonTerminal); ok {
-		return s.addUniquePrediction(st)
+	postDot, ok := rule.PostDotSymbol().Deconstruct()
+	if ok {
+		if _, ok := postDot.(grammar.NonTerminal); ok {
+			return s.addUniquePrediction(st)
+		}
 	}
 	return s.addUniqueScan(st)
 }

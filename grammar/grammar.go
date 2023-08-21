@@ -1,10 +1,18 @@
 package grammar
 
+import (
+	"github.com/patrickhuber/go-earley/bitmatrix"
+	"github.com/patrickhuber/go-types"
+	"github.com/patrickhuber/go-types/handle"
+	"github.com/patrickhuber/go-types/result"
+)
+
 type Grammar struct {
 	Start          NonTerminal
 	Productions    []*Production
 	Rules          RuleRegistry
 	transitiveNull map[Symbol]struct{}
+	rightRecursive []*Production
 }
 
 func New(start NonTerminal, productions ...*Production) *Grammar {
@@ -16,7 +24,11 @@ func New(start NonTerminal, productions ...*Production) *Grammar {
 	g.Rules = compute(g)
 	// compute transitive null
 	g.transitiveNull = identifyNullableSymbols(g)
-
+	// compute right recursive
+	rightRecursive, err := g.identifyRightRecursiveSymbols().Deconstruct()
+	if err != nil {
+		g.rightRecursive = rightRecursive
+	}
 	return g
 }
 
@@ -82,12 +94,17 @@ func identifyNullableSymbols(g *Grammar) map[Symbol]struct{} {
 			continue
 		}
 
-		if _, ok := rule.PostDotSymbol().(NonTerminal); !ok {
+		sym, ok := rule.PostDotSymbol().Deconstruct()
+		if !ok {
+			continue
+		}
+
+		if _, ok := sym.(NonTerminal); !ok {
 			changes++
 			continue
 		}
 
-		if _, ok := transitiveNull[rule.PostDotSymbol()]; ok {
+		if _, ok := transitiveNull[sym]; ok {
 			next, ok := g.Rules.Next(rule)
 			if !ok {
 				continue
@@ -101,9 +118,63 @@ func identifyNullableSymbols(g *Grammar) map[Symbol]struct{} {
 			changes++
 			continue
 		}
+
 		unprocessed = enqueue(unprocessed, rule)
 	}
 	return transitiveNull
+}
+
+func (g *Grammar) identifyRightRecursiveSymbols() (res types.Result[[]*Production]) {
+	defer handle.Error(&res)
+	rules := []*DottedRule{}
+	for _, p := range g.Productions {
+		for s := len(p.RightHandSide); s > 0; s-- {
+			rule, ok := g.Rules.Get(p, s)
+			if !ok {
+				continue
+			}
+			sym, ok := rule.PreDotSymbol().Deconstruct()
+			if !ok {
+				continue
+			}
+			nt, ok := sym.(NonTerminal)
+			if !ok {
+				continue
+			}
+			rules = append(rules, rule)
+			if g.IsTransativeNullable(nt) {
+				break
+			}
+		}
+	}
+
+	adjacency := bitmatrix.New(len(rules))
+	for row := 0; row < len(rules); row++ {
+		left := rules[row]
+		for col := 0; col < len(rules); col++ {
+			right := rules[col]
+			predot, ok := right.PreDotSymbol().Deconstruct()
+			if !ok {
+				continue
+			}
+			if left.Production.LeftHandSide == predot {
+				adjacency.Set(row, col, true)
+			}
+		}
+	}
+
+	var rightRecursive []*Production
+	reachability := result.New(
+		bitmatrix.TransitiveClosure(adjacency)).Unwrap()
+
+	for row := 0; row < len(rules); row++ {
+		reachable := result.New(
+			reachability.Get(row, row)).Unwrap()
+		if reachable {
+			rightRecursive = append(rightRecursive, rules[row].Production)
+		}
+	}
+	return result.Ok(rightRecursive)
 }
 
 func enqueue[T any](queue []T, item T) []T {
