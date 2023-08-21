@@ -62,6 +62,8 @@ func identifyNullableSymbols(g *Grammar) map[Symbol]struct{} {
 			if changes == 0 {
 				break
 			}
+			changes = 0
+
 			temp := unprocessed
 			unprocessed = work
 			work = temp
