@@ -18,3 +18,7 @@ func (*whitespace) IsMatch(ch rune) bool {
 func NewWhitespace() grammar.Terminal {
 	return &whitespace{}
 }
+
+func (*whitespace) String() string {
+	return "\\s+"
+}

@@ -26,6 +26,10 @@ func (t *terminal) Type() string {
 	return TerminalType
 }
 
+func (t *terminal) TokenType() string {
+	return t.term.String()
+}
+
 // Terminal implements Terminal.
 func (t *terminal) Terminal() grammar.Terminal {
 	return t.term
@@ -35,4 +39,8 @@ func NewTerminal(t grammar.Terminal) Terminal {
 	return &terminal{
 		term: t,
 	}
+}
+
+func (t *terminal) String() string {
+	return t.Terminal().String()
 }

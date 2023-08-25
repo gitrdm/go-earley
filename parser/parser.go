@@ -1,6 +1,8 @@
 package parser
 
 import (
+	"fmt"
+
 	"github.com/patrickhuber/go-earley/chart"
 	"github.com/patrickhuber/go-earley/grammar"
 	"github.com/patrickhuber/go-earley/state"
@@ -30,6 +32,8 @@ func New(g *grammar.Grammar) Parser {
 }
 
 func (p *parser) initialize() {
+	fmt.Printf("--------- %d ---------", p.location)
+	fmt.Println()
 	p.location = 0
 	p.chart = chart.New()
 	start := p.grammar.StartProductions()
@@ -59,6 +63,8 @@ func (p *parser) Pulse(tok token.Token) (bool, error) {
 	}
 
 	p.location++
+	fmt.Printf("--------- %d ---------", p.location)
+	fmt.Println()
 	p.reductionPass(p.location)
 
 	return true, nil
@@ -85,7 +91,7 @@ func (p *parser) scan(s *state.Normal, j int, tok token.Token) {
 	}
 
 	// skip scanning if the token type doesn't match
-	if lexRule.Type() != tok.Type() {
+	if lexRule.TokenType() != tok.Type() {
 		return
 	}
 
@@ -103,6 +109,8 @@ func (p *parser) scan(s *state.Normal, j int, tok token.Token) {
 	// create a next from the dotted rule
 	next := p.NewState(rule.Production, rule.Position, s.Origin)
 	p.chart.Enqueue(j+1, next)
+	fmt.Printf("%s : Scan", next)
+	fmt.Println()
 }
 
 func (parser *parser) reductionPass(location int) {
@@ -164,7 +172,8 @@ func (p *parser) leoComplete(trans *state.Transition, location int) {
 		// this is the top most item
 		topMostItem := p.NewState(c.DottedRule.Production, c.DottedRule.Position, c.Origin)
 		p.chart.Enqueue(location, topMostItem)
-
+		fmt.Printf("%s : Leo Complete", topMostItem)
+		fmt.Println()
 		// there will only be one of these
 		break
 	}
@@ -193,6 +202,8 @@ func (par *parser) earleyComplete(completed *state.Normal, location int) {
 
 		state := par.NewState(rule.Production, rule.Position, origin)
 		par.chart.Enqueue(location, state)
+		fmt.Printf("%s : Earley Complete", state)
+		fmt.Println()
 	}
 }
 
@@ -264,6 +275,7 @@ func (parser *parser) memoize(location int) {
 				Symbol:     postDot,
 			}
 		}
+
 		parser.chart.Enqueue(location, trans)
 	}
 }
@@ -325,6 +337,8 @@ func (p *parser) predictProduction(location int, production *grammar.Production)
 	}
 	s := p.NewState(rule.Production, rule.Position, location)
 	p.chart.Enqueue(location, s)
+	fmt.Printf("%s : Predict", s)
+	fmt.Println()
 }
 
 func (p *parser) predictAycockHorspool(evidence *state.Normal, location int) {
@@ -337,6 +351,8 @@ func (p *parser) predictAycockHorspool(evidence *state.Normal, location int) {
 	}
 	state := p.NewState(next.Production, next.Position, evidence.Origin)
 	p.chart.Enqueue(location, state)
+	fmt.Printf("%s : Predict AH", state)
+	fmt.Println()
 }
 
 func (p *parser) Location() int {

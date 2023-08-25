@@ -29,7 +29,7 @@ func TestParser(t *testing.T) {
 	p := parser.New(g)
 
 	for i := 0; i < 10; i++ {
-		tok := token.FromString("s", i, s.Type())
+		tok := token.FromString("s", i, s.TokenType())
 		ok, err := p.Pulse(tok)
 		require.NoError(t, err, "loop %d", i)
 		require.True(t, ok, "loop %d", i)
@@ -59,7 +59,7 @@ func TestAycockHorspool(t *testing.T) {
 	)
 
 	p := parser.New(g)
-	tok := token.FromString("a", 0, a.Type())
+	tok := token.FromString("a", 0, a.TokenType())
 	ok, err := p.Pulse(tok)
 
 	require.NoError(t, err)
@@ -68,23 +68,54 @@ func TestAycockHorspool(t *testing.T) {
 }
 
 func TestLeo(t *testing.T) {
-	A := grammar.NewNonTerminal("A")
-	a := lexrule.NewString("a")
+	t.Run("leo 1", func(t *testing.T) {
+		A := grammar.NewNonTerminal("A")
+		a := lexrule.NewString("a")
 
-	// A -> A 'a'
-	// A ->
-	g := grammar.New(A,
-		grammar.NewProduction(A, a, A),
-		grammar.NewProduction(A),
-	)
+		// A -> A 'a'
+		// A ->
+		g := grammar.New(A,
+			grammar.NewProduction(A, a, A),
+			grammar.NewProduction(A),
+		)
 
-	p := parser.New(g)
-	for i := 0; i < 10; i++ {
-		tok := token.FromString("a", i, a.Type())
-		ok, err := p.Pulse(tok)
-		require.NoError(t, err, "loop %d", i)
-		require.True(t, ok, "loop %d", i)
-	}
-	require.True(t, p.Accepted())
-	
+		p := parser.New(g)
+		for i := 0; i < 10; i++ {
+			tok := token.FromString("a", i, a.TokenType())
+			ok, err := p.Pulse(tok)
+			require.NoError(t, err, "loop %d", i)
+			require.True(t, ok, "loop %d", i)
+		}
+		require.True(t, p.Accepted())
+	})
+
+	t.Run("leo 2", func(t *testing.T) {
+		// S -> 'a' S
+		// S -> C
+		// C -> 'a' C 'b'
+		// C ->
+		S := grammar.NewNonTerminal("S")
+		C := grammar.NewNonTerminal("C")
+		a := lexrule.NewString("a")
+		b := lexrule.NewString("b")
+
+		g := grammar.New(S,
+			grammar.NewProduction(S, a, S),
+			grammar.NewProduction(S, C),
+			grammar.NewProduction(C, a, C, b),
+			grammar.NewProduction(C))
+
+		p := parser.New(g)
+		for i := 0; i < 10; i++ {
+			lr := a
+			if i > 5 {
+				lr = b
+			}
+			tok := token.FromString(lr.Value, i, lr.TokenType())
+			ok, err := p.Pulse(tok)
+			require.NoError(t, err)
+			require.True(t, ok)
+		}
+		require.True(t, p.Accepted())
+	})
 }

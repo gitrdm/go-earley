@@ -22,6 +22,10 @@ func (s *String) CanApply(ch rune) bool {
 	return false
 }
 
+func (t *String) TokenType() string {
+	return t.Value
+}
+
 // ID implements String.
 func (s *String) Type() string {
 	return StringType

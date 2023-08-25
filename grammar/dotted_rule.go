@@ -1,6 +1,8 @@
 package grammar
 
 import (
+	"strings"
+
 	"github.com/patrickhuber/go-types"
 	"github.com/patrickhuber/go-types/option"
 )
@@ -10,6 +12,7 @@ type DottedRule struct {
 	Position   int
 	preDot     Symbol
 	postDot    Symbol
+	str        string
 }
 
 func NewDottedRule(production *Production, position int) *DottedRule {
@@ -46,4 +49,26 @@ func (dr *DottedRule) PostDotSymbol() types.Option[Symbol] {
 	}
 	dr.postDot = rhs[dr.Position]
 	return option.Some(dr.postDot)
+}
+
+func (dr *DottedRule) String() string {
+	if len(dr.str) > 0 {
+		return dr.str
+	}
+	sb := &strings.Builder{}
+	sb.WriteString(dr.Production.LeftHandSide.Name())
+	sb.WriteString(" ->")
+	for i, s := range dr.Production.RightHandSide {
+		if i == dr.Position {
+			sb.WriteString("•")
+		} else {
+			sb.WriteString(" ")
+		}
+		sb.WriteString(s.String())
+	}
+	if len(dr.Production.RightHandSide) == dr.Position {
+		sb.WriteString("•")
+	}
+	dr.str = sb.String()
+	return dr.str
 }

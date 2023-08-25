@@ -1,7 +1,9 @@
 package state
 
 import (
+	"fmt"
 	"go/ast"
+	"strconv"
 
 	"github.com/patrickhuber/go-earley/grammar"
 )
@@ -25,4 +27,8 @@ type Normal struct {
 
 func (*Normal) Type() Type {
 	return NormalType
+}
+func (n *Normal) String() string {
+	return fmt.Sprintf("%s, %s",
+		n.DottedRule, strconv.Itoa(n.Origin))
 }

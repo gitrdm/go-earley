@@ -17,3 +17,7 @@ func (*_any) IsMatch(ch rune) bool {
 func NewAny() grammar.Terminal {
 	return &_any{}
 }
+
+func (*_any) String() string {
+	return ".*"
+}

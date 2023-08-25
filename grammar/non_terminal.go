@@ -28,3 +28,7 @@ func (nt *nonTerminal) Equal(other Symbol) bool {
 	}
 	return nt.name == otherNonTerminal.Name()
 }
+
+func (nt *nonTerminal) String() string {
+	return nt.name
+}

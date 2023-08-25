@@ -1,6 +1,11 @@
 package state
 
-import "github.com/patrickhuber/go-earley/grammar"
+import (
+	"fmt"
+	"strconv"
+
+	"github.com/patrickhuber/go-earley/grammar"
+)
 
 const (
 	TransitionType Type = 1
@@ -13,3 +18,8 @@ type Transition struct {
 }
 
 func (*Transition) Type() Type { return TransitionType }
+
+func (t *Transition) String() string {
+	return fmt.Sprintf("%s : %s, %s",
+		t.Symbol, t.DottedRule, strconv.Itoa(t.Origin))
+}
