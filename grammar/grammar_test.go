@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/patrickhuber/go-earley/grammar"
+	"github.com/patrickhuber/go-earley/lexrule"
 	"github.com/stretchr/testify/require"
 )
 
@@ -19,5 +20,29 @@ func TestGrammar(t *testing.T) {
 		require.True(t, g.IsTransativeNullable(S))
 		require.True(t, g.IsTransativeNullable(A))
 		require.True(t, g.IsTransativeNullable(E))
+	})
+	
+	t.Run("right recursive", func(t *testing.T) {
+		A := grammar.NewNonTerminal("A")
+		a := lexrule.NewString("a")
+
+		// A -> A 'a'
+		A_aA := grammar.NewProduction(A, a, A)
+		// A ->
+		A_ := grammar.NewProduction(A)
+
+		g := grammar.New(A,
+			A_aA,
+			A_)
+
+		require.True(t, g.IsRightRecursive(A_aA))
+		require.False(t, g.IsRightRecursive(A_))
+
+		A_Aa := grammar.NewProduction(A, A, a)
+		g = grammar.New(A,
+			A_Aa,
+			A_)
+		require.False(t, g.IsRightRecursive(A_Aa))
+		require.False(t, g.IsRightRecursive(A_))
 	})
 }

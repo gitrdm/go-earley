@@ -126,6 +126,7 @@ func (parser *parser) reductionPass(location int) {
 		}
 		resume = false
 	}
+	parser.memoize(location)
 }
 
 func (p *parser) complete(completed *state.Normal, location int) {
@@ -134,13 +135,13 @@ func (p *parser) complete(completed *state.Normal, location int) {
 
 	trans, ok := set.FindTransition(sym)
 	if ok {
-		p.leoComplete(trans, completed, location)
+		p.leoComplete(trans, location)
 	} else {
 		p.earleyComplete(completed, location)
 	}
 }
 
-func (p *parser) leoComplete(trans *state.Transition, completed *state.Normal, location int) {
+func (p *parser) leoComplete(trans *state.Transition, location int) {
 	dr := trans.DottedRule
 	origin := trans.Origin
 
@@ -149,9 +150,26 @@ func (p *parser) leoComplete(trans *state.Transition, completed *state.Normal, l
 		return
 	}
 
-	// use the cache item to create the state instead of expanding out all the completed states
-	topMostItem := p.NewState(dr.Production, dr.Position, origin)
-	p.chart.Enqueue(location, topMostItem)
+	// jump to the set pointed to by the transition item
+	set := p.chart.Sets[trans.Origin]
+
+	// find the top most item (the one that has trans.Sym as its postdot symbol)
+	for _, c := range set.Completions {
+		sym, ok := c.DottedRule.PostDotSymbol().Deconstruct()
+		if !ok {
+			continue
+		}
+		if sym != trans.Symbol {
+			continue
+		}
+
+		// this is the top most item
+		topMostItem := p.NewState(c.DottedRule.Production, c.DottedRule.Position, c.Origin)
+		p.chart.Enqueue(location, topMostItem)
+
+		// there will only be one of these
+		break
+	}
 }
 
 func (par *parser) earleyComplete(completed *state.Normal, location int) {
@@ -178,6 +196,101 @@ func (par *parser) earleyComplete(completed *state.Normal, location int) {
 		state := par.NewState(rule.Production, rule.Position, origin)
 		par.chart.Enqueue(location, state)
 	}
+}
+
+func (parser *parser) memoize(location int) {
+	set := parser.chart.Sets[location]
+
+	counts := map[grammar.Symbol]int{}
+	states := map[grammar.Symbol]state.State{}
+
+	// count the symbols on the right hand side of each rule
+	for _, p := range set.Predictions {
+		rule := p.DottedRule
+		postDotSymbol, ok := rule.PostDotSymbol().Deconstruct()
+		if !ok {
+			continue
+		}
+		_, ok = counts[postDotSymbol]
+		if ok {
+			counts[postDotSymbol] += 1
+		} else {
+			states[postDotSymbol] = p
+			counts[postDotSymbol] = 1
+		}
+	}
+
+	// find leo eligible items and memoize them
+	for postDot, count := range counts {
+		if count != 1 {
+			continue
+		}
+		prediction, ok := states[postDot]
+		if !ok {
+			continue
+		}
+		normal, ok := prediction.(*state.Normal)
+		if !ok {
+			continue
+		}
+		if !parser.grammar.IsRightRecursive(normal.DottedRule.Production) {
+			continue
+		}
+		next, ok := parser.grammar.Rules.Next(normal.DottedRule)
+		if !ok {
+			continue
+		}
+		if !parser.isQuasiComplete(next) {
+			continue
+		}
+
+		// find the set where this state originated
+		set := parser.chart.Sets[normal.Origin]
+
+		// is there a transition?
+		trans, ok := set.FindTransition(postDot)
+
+		if ok {
+			// if so, copy it here
+			clone := &state.Transition{
+				Origin:     trans.Origin,
+				DottedRule: trans.DottedRule,
+				Symbol:     trans.Symbol,
+			}
+			trans = clone
+		} else {
+			// otherwise create it
+			trans = &state.Transition{
+				Origin:     location,
+				DottedRule: next,
+				Symbol:     postDot,
+			}
+		}
+		parser.chart.Enqueue(location, trans)
+	}
+}
+
+func (parser *parser) isQuasiComplete(rule *grammar.DottedRule) bool {
+	if rule.Complete() {
+		return true
+	}
+	// all postdot symbols are nullable
+	for i := rule.Position; i < len(rule.Production.RightHandSide); i++ {
+		sym := rule.Production.RightHandSide[i]
+		nt, ok := sym.(grammar.NonTerminal)
+		if !ok {
+			return false
+		}
+		if !parser.grammar.IsTransativeNullable(nt) {
+			return false
+		}
+		// page 4 leo paper
+		// check if S can derive S
+		if rule.Production.LeftHandSide == parser.grammar.Start && parser.grammar.Start == nt {
+			return false
+		}
+	}
+	return true
 }
 
 func (par *parser) predict(evidence *state.Normal, location int) {

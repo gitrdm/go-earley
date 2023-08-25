@@ -12,7 +12,7 @@ type Grammar struct {
 	Productions    []*Production
 	Rules          RuleRegistry
 	transitiveNull map[Symbol]struct{}
-	rightRecursive []*Production
+	rightRecursive map[*Production]struct{}
 }
 
 func New(start NonTerminal, productions ...*Production) *Grammar {
@@ -26,7 +26,7 @@ func New(start NonTerminal, productions ...*Production) *Grammar {
 	g.transitiveNull = identifyNullableSymbols(g)
 	// compute right recursive
 	rightRecursive, err := g.identifyRightRecursiveSymbols().Deconstruct()
-	if err != nil {
+	if err == nil {
 		g.rightRecursive = rightRecursive
 	}
 	return g
@@ -124,25 +124,37 @@ func identifyNullableSymbols(g *Grammar) map[Symbol]struct{} {
 	return transitiveNull
 }
 
-func (g *Grammar) identifyRightRecursiveSymbols() (res types.Result[[]*Production]) {
+func (g *Grammar) identifyRightRecursiveSymbols() (res types.Result[map[*Production]struct{}]) {
 	defer handle.Error(&res)
+
+	// if a rule is right recursive, add it to the rules
+	// if a rule has a pre dot symbol that is nullable,
+	//     walking back in the rule
+	//         skip if reaching the end or a terminal
+	//         add if reaching a right recursive predot symbol
 	rules := []*DottedRule{}
 	for _, p := range g.Productions {
+
 		for s := len(p.RightHandSide); s > 0; s-- {
 			rule, ok := g.Rules.Get(p, s)
 			if !ok {
-				continue
+				break
 			}
 			sym, ok := rule.PreDotSymbol().Deconstruct()
 			if !ok {
-				continue
+				break
 			}
 			nt, ok := sym.(NonTerminal)
 			if !ok {
-				continue
+				break
 			}
-			rules = append(rules, rule)
-			if g.IsTransativeNullable(nt) {
+			// is the rule right recursive?
+			if rule.Production.LeftHandSide == nt {
+				rules = append(rules, rule)
+				break
+			}
+			// is the rhs nullable?
+			if !g.IsTransativeNullable(nt) {
 				break
 			}
 		}
@@ -163,7 +175,7 @@ func (g *Grammar) identifyRightRecursiveSymbols() (res types.Result[[]*Productio
 		}
 	}
 
-	var rightRecursive []*Production
+	rightRecursive := map[*Production]struct{}{}
 	reachability := result.New(
 		bitmatrix.TransitiveClosure(adjacency)).Unwrap()
 
@@ -171,7 +183,7 @@ func (g *Grammar) identifyRightRecursiveSymbols() (res types.Result[[]*Productio
 		reachable := result.New(
 			reachability.Get(row, row)).Unwrap()
 		if reachable {
-			rightRecursive = append(rightRecursive, rules[row].Production)
+			rightRecursive[rules[row].Production] = struct{}{}
 		}
 	}
 	return result.Ok(rightRecursive)
@@ -203,5 +215,10 @@ func (g *Grammar) StartProductions() []*Production {
 
 func (g *Grammar) IsTransativeNullable(nt NonTerminal) bool {
 	_, ok := g.transitiveNull[nt]
+	return ok
+}
+
+func (g *Grammar) IsRightRecursive(p *Production) bool {
+	_, ok := g.rightRecursive[p]
 	return ok
 }

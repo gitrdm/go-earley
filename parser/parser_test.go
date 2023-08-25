@@ -34,6 +34,7 @@ func TestParser(t *testing.T) {
 		require.NoError(t, err, "loop %d", i)
 		require.True(t, ok, "loop %d", i)
 	}
+	require.True(t, p.Accepted())
 }
 
 func TestAycockHorspool(t *testing.T) {
@@ -64,4 +65,26 @@ func TestAycockHorspool(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, ok)
 	require.True(t, p.Accepted())
+}
+
+func TestLeo(t *testing.T) {
+	A := grammar.NewNonTerminal("A")
+	a := lexrule.NewString("a")
+
+	// A -> A 'a'
+	// A ->
+	g := grammar.New(A,
+		grammar.NewProduction(A, a, A),
+		grammar.NewProduction(A),
+	)
+
+	p := parser.New(g)
+	for i := 0; i < 10; i++ {
+		tok := token.FromString("a", i, a.Type())
+		ok, err := p.Pulse(tok)
+		require.NoError(t, err, "loop %d", i)
+		require.True(t, ok, "loop %d", i)
+	}
+	require.True(t, p.Accepted())
+	
 }

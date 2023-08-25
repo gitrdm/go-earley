@@ -9,8 +9,9 @@ type Set struct {
 	Predictions []*state.Normal
 	Scans       []*state.Normal
 	Completions []*state.Normal
-	Transitions []state.Transition
-	Location    int
+	Transitions map[grammar.Symbol]*state.Transition
+
+	Location int
 
 	reductions map[grammar.Symbol][]*state.Normal
 }
@@ -81,7 +82,8 @@ func (s *Set) FindScan(dr *grammar.DottedRule, origin int) (state.State, bool) {
 }
 
 func (s *Set) FindTransition(sym grammar.Symbol) (*state.Transition, bool) {
-	return nil, false
+	trans, ok := s.Transitions[sym]
+	return trans, ok
 }
 
 // FindSourceStates finds any state in the set where the post dot symbol is equal to the given symbol sym
@@ -146,7 +148,16 @@ func (s *Set) enqueueNormal(st *state.Normal) bool {
 }
 
 func (s *Set) enqueueTransition(st *state.Transition) bool {
-	return false
+	_, ok := s.FindTransition(st.Symbol)
+	if ok {
+		return false
+	}
+	// create if not exists
+	if s.Transitions == nil {
+		s.Transitions = map[grammar.Symbol]*state.Transition{}
+	}
+	s.Transitions[st.Symbol] = st
+	return true
 }
 
 func (s *Set) addUniqueCompletion(completion *state.Normal) bool {
@@ -187,12 +198,12 @@ func (s *Set) addUniqueScan(scan *state.Normal) bool {
 	return true
 }
 
-func addUnique(states []*state.Normal, st *state.Normal) ([]*state.Normal, bool) {
+func addUnique[T state.Normal | state.Transition](states []*T, item *T) ([]*T, bool) {
 	for _, s := range states {
-		if s == st {
+		if s == item {
 			return states, false
 		}
 	}
-	states = append(states, st)
+	states = append(states, item)
 	return states, true
 }

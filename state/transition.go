@@ -9,6 +9,7 @@ const (
 type Transition struct {
 	Origin     int
 	DottedRule *grammar.DottedRule
+	Symbol     grammar.Symbol
 }
 
 func (*Transition) Type() Type { return TransitionType }
