@@ -142,24 +142,22 @@ func (p *parser) complete(completed *state.Normal, location int) {
 }
 
 func (p *parser) leoComplete(trans *state.Transition, location int) {
-	dr := trans.DottedRule
-	origin := trans.Origin
-
-	// don't create memory for something that already exists
-	if p.chart.Contains(location, state.NormalType, dr, origin) {
-		return
-	}
 
 	// jump to the set pointed to by the transition item
 	set := p.chart.Sets[trans.Origin]
 
-	// find the top most item (the one that has trans.Sym as its postdot symbol)
+	// find the top most item (the one that has trans.Sym as its predot symbol)
 	for _, c := range set.Completions {
-		sym, ok := c.DottedRule.PostDotSymbol().Deconstruct()
+		sym, ok := c.DottedRule.PreDotSymbol().Deconstruct()
 		if !ok {
 			continue
 		}
 		if sym != trans.Symbol {
+			continue
+		}
+
+		// check if the item exists
+		if p.chart.Contains(location, state.NormalType, c.DottedRule, c.Origin) {
 			continue
 		}
 
