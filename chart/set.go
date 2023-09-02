@@ -21,12 +21,12 @@ func NewSet() *Set {
 }
 
 func (s *Set) Contains(ty state.Type, dr *grammar.DottedRule, origin int) bool {
-	_, ok := s.find(ty, dr, origin)
+	_, ok := s.find(dr, origin)
 	return ok
 }
 
-func (s *Set) GetOrCreate(ty state.Type, dr *grammar.DottedRule, origin int) state.State {
-	st, ok := s.find(ty, dr, origin)
+func (s *Set) GetOrCreate(dr *grammar.DottedRule, origin int) *state.Normal {
+	st, ok := s.find(dr, origin)
 	if ok {
 		return st
 	}
@@ -38,10 +38,7 @@ func (s *Set) GetOrCreate(ty state.Type, dr *grammar.DottedRule, origin int) sta
 	return normal
 }
 
-func (s *Set) find(ty state.Type, dr *grammar.DottedRule, origin int) (state.State, bool) {
-	if ty != state.NormalType {
-		return nil, false
-	}
+func (s *Set) find(dr *grammar.DottedRule, origin int) (*state.Normal, bool) {
 	if dr.Complete() {
 		return s.FindCompletion(dr, origin)
 	}
@@ -56,7 +53,7 @@ func (s *Set) find(ty state.Type, dr *grammar.DottedRule, origin int) (state.Sta
 	return s.FindScan(dr, origin)
 }
 
-func (s *Set) findIn(dr *grammar.DottedRule, origin int, states []*state.Normal) (state.State, bool) {
+func (s *Set) findIn(dr *grammar.DottedRule, origin int, states []*state.Normal) (*state.Normal, bool) {
 	for _, state := range states {
 		if state.Origin != origin {
 			continue
@@ -69,15 +66,15 @@ func (s *Set) findIn(dr *grammar.DottedRule, origin int, states []*state.Normal)
 	return nil, false
 }
 
-func (s *Set) FindCompletion(dr *grammar.DottedRule, origin int) (state.State, bool) {
+func (s *Set) FindCompletion(dr *grammar.DottedRule, origin int) (*state.Normal, bool) {
 	return s.findIn(dr, origin, s.Completions)
 }
 
-func (s *Set) FindPrediction(dr *grammar.DottedRule, origin int) (state.State, bool) {
+func (s *Set) FindPrediction(dr *grammar.DottedRule, origin int) (*state.Normal, bool) {
 	return s.findIn(dr, origin, s.Predictions)
 }
 
-func (s *Set) FindScan(dr *grammar.DottedRule, origin int) (state.State, bool) {
+func (s *Set) FindScan(dr *grammar.DottedRule, origin int) (*state.Normal, bool) {
 	return s.findIn(dr, origin, s.Scans)
 }
 

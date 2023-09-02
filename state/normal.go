@@ -2,9 +2,9 @@ package state
 
 import (
 	"fmt"
-	"go/ast"
 	"strconv"
 
+	"github.com/patrickhuber/go-earley/forest"
 	"github.com/patrickhuber/go-earley/grammar"
 )
 
@@ -22,7 +22,7 @@ func NewNormal(rule *grammar.DottedRule, origin int) *Normal {
 type Normal struct {
 	Origin     int
 	DottedRule *grammar.DottedRule
-	Node       ast.Node
+	Node       forest.Node
 }
 
 func (*Normal) Type() Type {

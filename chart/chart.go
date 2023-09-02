@@ -23,9 +23,9 @@ func (c *Chart) Enqueue(index int, s state.State) bool {
 	return set.Enqueue(s)
 }
 
-func (c *Chart) GetOrCreate(index int, ty state.Type, rule *grammar.DottedRule, origin int) state.State {
+func (c *Chart) GetOrCreate(index int, rule *grammar.DottedRule, origin int) *state.Normal {
 	set := c.getOrCreateSet(index)
-	return set.GetOrCreate(ty, rule, origin)
+	return set.GetOrCreate(rule, origin)
 }
 
 func (c *Chart) getOrCreateSet(index int) *Set {

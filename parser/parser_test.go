@@ -3,6 +3,7 @@ package parser_test
 import (
 	"testing"
 
+	"github.com/patrickhuber/go-earley/forest"
 	"github.com/patrickhuber/go-earley/grammar"
 	"github.com/patrickhuber/go-earley/lexrule"
 	"github.com/patrickhuber/go-earley/parser"
@@ -117,5 +118,149 @@ func TestLeo(t *testing.T) {
 			require.True(t, ok)
 		}
 		require.True(t, p.Accepted())
+	})
+}
+
+func TestForest(t *testing.T) {
+
+	t.Run("Scott2008_sec4_ex3", func(t *testing.T) {
+		// S -> AT | aT
+		// A -> a | BA
+		// B ->
+		// T -> b b b
+		S := grammar.NewNonTerminal("S")
+		A := grammar.NewNonTerminal("A")
+		T := grammar.NewNonTerminal("T")
+		B := grammar.NewNonTerminal("B")
+		a := lexrule.NewString("a")
+		b := lexrule.NewString("b")
+		g := grammar.New(S,
+			grammar.NewProduction(S, A, T),
+			grammar.NewProduction(S, a, T),
+			grammar.NewProduction(A, a),
+			grammar.NewProduction(A, B, A),
+			grammar.NewProduction(B),
+			grammar.NewProduction(T, b, b, b))
+		p := parser.New(g)
+		input := []*lexrule.String{a, b, b, b}
+		for i, sym := range input {
+			tok := token.FromString(sym.Value, i, sym.TokenType())
+			ok, err := p.Pulse(tok)
+			require.NoError(t, err)
+			require.True(t, ok)
+		}
+		require.True(t, p.Accepted())
+
+		root, ok := p.GetForestRoot()
+		require.True(t, ok)
+		require.NotNil(t, root)
+
+		/*
+			(S,0,4) ->
+				(S->a*T,0,1) (T,1,4)
+			|	(S->A*T,0,1) (T,1,4)
+
+			(S->a*T,0,1) ->
+				(a,0,1)
+
+			(T,1,4) ->
+				(T->bb*b,1,3) (b,3,4)
+
+			(T->bb*b,1,3) ->
+				(T->b*bb,1,2) (b,2,3)
+
+			(T->b*bb,1,2) ->
+				(b,1,2)
+
+			(S->A*T,01) ->
+				(A,0,1)
+
+			(A,0,1) ->
+				(a,0,1)
+			|	(A->B*A,0,0) (A,0,1)
+
+			(A->B*A,0,0) ->
+				(B,0,0)
+
+			(B,0,0)->
+		*/
+		S_0_4, ok := root.(*forest.Symbol)
+		require.True(t, ok)
+		require.Equal(t, S, S_0_4.Symbol)
+		require.NotNil(t, S_0_4.Internal)
+		require.Equal(t, 2, len(S_0_4.Internal.Alternatives))
+
+		S_0_4_0 := S_0_4.Internal.Alternatives[0]
+		require.Equal(t, 2, len(S_0_4_0.Children))
+
+		S_at_0_1, ok := S_0_4_0.Children[0].(*forest.Intermediate)
+		require.True(t, ok)
+		require.Equal(t, 0, S_at_0_1.Origin)
+		require.Equal(t, 1, S_at_0_1.Location)
+		require.Equal(t, 1, len(S_at_0_1.Internal.Alternatives))
+		require.Equal(t, 1, len(S_at_0_1.Internal.Alternatives[0].Children))
+
+		a_0_1, ok := S_at_0_1.Internal.Alternatives[0].Children[0].(*forest.Token)
+		require.True(t, ok)
+		require.Equal(t, a.TokenType(), a_0_1.Token.Type())
+		require.Equal(t, 0, a_0_1.Origin)
+		require.Equal(t, 1, a_0_1.Location)
+
+		T_1_4, ok := S_0_4_0.Children[1].(*forest.Symbol)
+		require.True(t, ok)
+		require.Equal(t, T, T_1_4.Symbol)
+		require.Equal(t, 1, T_1_4.Origin)
+		require.Equal(t, 4, T_1_4.Location)
+		require.Equal(t, 1, len(T_1_4.Internal.Alternatives))
+		require.Equal(t, 2, len(T_1_4.Internal.Alternatives[0].Children))
+
+		T_bbb_1_3, ok := T_1_4.Internal.Alternatives[0].Children[0].(*forest.Intermediate)
+		require.True(t, ok)
+		require.Equal(t, T, T_bbb_1_3.Rule.Production.LeftHandSide)
+		require.Equal(t, 2, T_bbb_1_3.Rule.Position)
+		require.Equal(t, 1, T_bbb_1_3.Origin)
+		require.Equal(t, 3, T_bbb_1_3.Location)
+		require.Equal(t, 1, len(T_bbb_1_3.Internal.Alternatives))
+		require.Equal(t, 2, len(T_bbb_1_3.Internal.Alternatives[0].Children))
+
+		T_bbb_1_2, ok := T_bbb_1_3.Internal.Alternatives[0].Children[0].(*forest.Intermediate)
+		require.True(t, ok)
+		require.Equal(t, T, T_bbb_1_2.Rule.Production.LeftHandSide)
+		require.Equal(t, 1, T_bbb_1_2.Rule.Position)
+		require.Equal(t, 1, T_bbb_1_2.Origin)
+		require.Equal(t, 2, T_bbb_1_2.Location)
+		require.Equal(t, 1, len(T_bbb_1_2.Internal.Alternatives))
+		require.Equal(t, 1, len(T_bbb_1_2.Internal.Alternatives[0].Children))
+
+		b_1_2, ok := T_bbb_1_2.Internal.Alternatives[0].Children[0].(*forest.Token)
+		require.True(t, ok)
+		require.Equal(t, b.TokenType(), b_1_2.Token.Type())
+
+		b_2_3, ok := T_bbb_1_3.Internal.Alternatives[0].Children[1].(*forest.Token)
+		require.True(t, ok)
+		require.Equal(t, b.TokenType(), b_2_3.Token.Type())
+
+		require.Equal(t, 2, len(S_0_4.Internal.Alternatives[1].Children))
+		require.Equal(t, T_1_4, S_0_4.Internal.Alternatives[1].Children[1])
+
+		S_AT_0_1, ok := S_0_4.Internal.Alternatives[1].Children[0].(*forest.Intermediate)
+		require.True(t, ok)
+		require.Equal(t, S, S_at_0_1.Rule.Production.LeftHandSide)
+		require.Equal(t, 0, S_AT_0_1.Origin)
+		require.Equal(t, 1, S_AT_0_1.Location)
+		require.Equal(t, 1, len(S_at_0_1.Internal.Alternatives))
+		require.Equal(t, 1, len(S_at_0_1.Internal.Alternatives[0].Children))
+
+		A_0_1, ok := S_AT_0_1.Internal.Alternatives[0].Children[0].(*forest.Symbol)
+		require.True(t, ok)
+		require.Equal(t, A, A_0_1.Symbol)
+		require.Equal(t, 0, A_0_1.Origin)
+		require.Equal(t, 1, A_0_1.Location)
+
+		require.Equal(t, 2, len(A_0_1.Internal.Alternatives))
+		require.Equal(t, 1, len(A_0_1.Internal.Alternatives[0].Children))
+		require.Equal(t, a_0_1, A_0_1.Internal.Alternatives[0].Children[0])
+
+		require.Equal(t, 2, len(A_0_1.Internal.Alternatives[1].Children))
 	})
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/patrickhuber/go-earley/chart"
+	"github.com/patrickhuber/go-earley/forest"
 	"github.com/patrickhuber/go-earley/grammar"
 	"github.com/patrickhuber/go-earley/state"
 	"github.com/patrickhuber/go-earley/token"
@@ -14,18 +15,21 @@ type Parser interface {
 	Accepted() bool
 	Location() int
 	Pulse(tok token.Token) (bool, error)
+	GetForestRoot() (forest.Node, bool)
 }
 
 type parser struct {
 	location int
 	grammar  *grammar.Grammar
 	chart    *chart.Chart
+	nodes    *forest.Set
 }
 
 func New(g *grammar.Grammar) Parser {
 	p := &parser{
 		grammar: g,
 		chart:   chart.New(),
+		nodes:   &forest.Set{},
 	}
 	p.initialize()
 	return p
@@ -46,12 +50,12 @@ func (p *parser) initialize() {
 	p.reductionPass(p.location)
 }
 
-func (p *parser) NewState(production *grammar.Production, position int, origin int) state.State {
+func (p *parser) NewState(production *grammar.Production, position int, origin int) *state.Normal {
 	dr, ok := p.grammar.Rules.Get(production, position)
 	if !ok {
 		panic("invalid state")
 	}
-	return p.chart.GetOrCreate(origin, state.NormalType, dr, origin)
+	return p.chart.GetOrCreate(origin, dr, origin)
 }
 
 func (p *parser) Pulse(tok token.Token) (bool, error) {
@@ -65,7 +69,9 @@ func (p *parser) Pulse(tok token.Token) (bool, error) {
 	p.location++
 	fmt.Printf("--------- %d ---------", p.location)
 	fmt.Println()
+
 	p.reductionPass(p.location)
+	p.nodes.Clear()
 
 	return true, nil
 }
@@ -106,8 +112,13 @@ func (p *parser) scan(s *state.Normal, j int, tok token.Token) {
 		return
 	}
 
+	// create the parse node
+	tokenNode := p.nodes.AddOrGetExistingTokenNode(tok, j+1)
+	parseNode := p.createParseNode(rule, s.Origin, s.Node, tokenNode, j+1)
+
 	// create a next from the dotted rule
 	next := p.NewState(rule.Production, rule.Position, s.Origin)
+	next.Node = parseNode
 	p.chart.Enqueue(j+1, next)
 	fmt.Printf("%s : Scan", next)
 	fmt.Println()
@@ -196,17 +207,25 @@ func (par *parser) earleyComplete(completed *state.Normal, location int) {
 		}
 		origin := prediction.Origin
 
+		// create a parse node before the existence check
+		// this is done on purpose
+		node := par.createParseNode(rule, origin, prediction.Node, completed.Node, location)
+
 		if par.chart.Contains(location, state.NormalType, rule, origin) {
 			continue
 		}
 
 		state := par.NewState(rule.Production, rule.Position, origin)
+		state.Node = node
+
 		par.chart.Enqueue(location, state)
+
 		fmt.Printf("%s : Earley Complete", state)
 		fmt.Println()
 	}
 }
 
+// memoize implements the memoization algorithm in the marpa paper
 func (parser *parser) memoize(location int) {
 	set := parser.chart.Sets[location]
 
@@ -303,6 +322,26 @@ func (parser *parser) isQuasiComplete(rule *grammar.DottedRule) bool {
 	return true
 }
 
+// isTransitiveComplete returns true if the rule is complete
+// or if every symbol between the dot and the end of the rule is transative null
+func (parser *parser) isTransativeComplete(rule *grammar.DottedRule) bool {
+	if rule.Complete() {
+		return true
+	}
+	// all postdot symbols are nullable
+	for i := rule.Position; i < len(rule.Production.RightHandSide); i++ {
+		sym := rule.Production.RightHandSide[i]
+		nt, ok := sym.(grammar.NonTerminal)
+		if !ok {
+			return false
+		}
+		if !parser.grammar.IsTransativeNullable(nt) {
+			return false
+		}
+	}
+	return true
+}
+
 func (par *parser) predict(evidence *state.Normal, location int) {
 	rule := evidence.DottedRule
 	sym, ok := rule.PostDotSymbol().Deconstruct()
@@ -365,6 +404,14 @@ func (p *parser) Accepted() bool {
 	return ok
 }
 
+func (p *parser) GetForestRoot() (forest.Node, bool) {
+	s, ok := p.findAcceptedCompletion(p.location)
+	if !ok {
+		return nil, false
+	}
+	return s.Node, true
+}
+
 func (p *parser) findAcceptedCompletion(location int) (*state.Normal, bool) {
 	set := p.chart.Sets[p.location]
 	start := p.grammar.Start
@@ -395,4 +442,79 @@ func (p *parser) Expected() []grammar.LexerRule {
 		expected = append(expected, lexRule)
 	}
 	return expected
+}
+
+func (p *parser) createParseNode(
+	rule *grammar.DottedRule,
+	origin int,
+	w,
+	v forest.Node,
+	location int) forest.Node {
+
+	/*
+		if B == E {
+			let s = B
+		}
+		else {
+			let s = (B -> ax.B)
+		}
+		if a == E and B != E{
+			let y = v
+		}
+		else {
+			if no node labeled (s,j,i) in V, create one add to V
+			if w == null and y has no family of children (v), add one
+			if W != null and y has no family of children (w,v), add one
+		}
+		return y
+	*/
+	anyPreDotRuleNil := false
+	if rule.Position > 1 {
+		preDotPrecursor := rule.Production.RightHandSide[rule.Position-2]
+		anyPreDotRuleNil = p.isSymbolTransitiveNullable(preDotPrecursor)
+	}
+
+	postDot := rule.PostDotSymbol()
+	anyPostDotRuleNil := postDot.IsNone() || p.isSymbolTransitiveNullable(postDot.Unwrap())
+	if anyPreDotRuleNil && !anyPostDotRuleNil {
+		return v
+	}
+
+	var internal *forest.Internal
+	var node forest.Node
+	if anyPostDotRuleNil {
+		symbol := p.nodes.AddOrGetExistingSymbolNode(
+			rule.Production.LeftHandSide,
+			origin,
+			location,
+		)
+		node = symbol
+		internal = symbol.Internal
+	} else {
+		intermediate := p.nodes.AddOrGetExistingIntermediateNode(
+			rule,
+			origin,
+			location,
+		)
+		node = intermediate
+		internal = intermediate.Internal
+	}
+
+	if w == nil {
+		internal.AddUniqueFamily(v, nil)
+	} else {
+		internal.AddUniqueFamily(w, v)
+	}
+	return node
+}
+
+func (p *parser) isSymbolTransitiveNullable(sym grammar.Symbol) bool {
+	if sym == nil {
+		return true
+	}
+	nt, ok := sym.(grammar.NonTerminal)
+	if !ok {
+		return false
+	}
+	return p.grammar.IsTransativeNullable(nt)
 }
