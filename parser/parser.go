@@ -389,6 +389,14 @@ func (p *parser) predictAycockHorspool(evidence *state.Normal, location int) {
 		return
 	}
 	state := p.NewState(next.Production, next.Position, evidence.Origin)
+
+	// create empty node
+	postDot := evidence.DottedRule.PostDotSymbol()
+	if postDot.IsSome() {
+		emptyNode := p.nodes.AddOrGetExistingSymbolNode(postDot.Unwrap(), location, location)
+		state.Node = emptyNode
+	}
+
 	p.chart.Enqueue(location, state)
 	fmt.Printf("%s : Predict AH", state)
 	fmt.Println()

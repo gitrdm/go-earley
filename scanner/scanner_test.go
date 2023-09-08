@@ -3,6 +3,7 @@ package scanner_test
 import (
 	"testing"
 
+	"github.com/patrickhuber/go-earley/forest"
 	"github.com/patrickhuber/go-earley/grammar"
 	"github.com/patrickhuber/go-earley/lexrule"
 	"github.com/patrickhuber/go-earley/parser"
@@ -87,4 +88,9 @@ func (p *FakeParser) Expected() []grammar.LexerRule {
 		return nil
 	}
 	return p.rules[p.index : p.index+1]
+}
+
+// GetForestRoot implements parser.Parser.
+func (*FakeParser) GetForestRoot() (forest.Node, bool) {
+	return nil, false
 }

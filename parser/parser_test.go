@@ -123,6 +123,61 @@ func TestLeo(t *testing.T) {
 
 func TestForest(t *testing.T) {
 
+	t.Run("Scott2008_sec4_ex2", func(t *testing.T) {
+		S := grammar.NewNonTerminal("S")
+		b := lexrule.NewString("b")
+
+		g := grammar.New(S,
+			grammar.NewProduction(S, S, S),
+			grammar.NewProduction(S, b),
+		)
+
+		p := parser.New(g)
+		input := []*lexrule.String{b, b, b}
+		for i, sym := range input {
+			tok := token.FromString(sym.Value, i, sym.TokenType())
+			ok, err := p.Pulse(tok)
+			require.NoError(t, err)
+			require.True(t, ok)
+		}
+		require.True(t, p.Accepted())
+
+		/*
+			(S,0,3)	->
+				(S->S*S,0,2) (S,2,3)
+			|	(S->S*S,0,1) (S,1,3)
+
+			(S->S*S,0,2) ->
+				(S,0,2)
+
+			(S->S*S,0,1) ->
+				(S,0,1)
+
+			(S,0,1) ->
+				(b,0,1)
+
+			(S,0,2) ->
+				(S->S*S,0,1) (S,1,2)
+
+			(S,1,2) ->
+				(b,1,2)
+
+			(S,1,3) ->
+				(S->S*S,1,2) (S,2,3)
+
+			(S,2,3) ->
+				(b,2,3)
+		*/
+		// S_0_3 := &forest.Symbol{Symbol: S, Origin: 0, Location: 3}
+		// S_SS_0_2 := &forest.Intermediate{Origin: 0, Location: 2}
+		// S_0_2 := &forest.Symbol{Symbol: S, Origin: 0, Location: 2}
+		// S_SS_0_1 := &forest.Intermediate{Origin: 0, Location: 1}
+		// S_0_1 := &forest.Symbol{Symbol: S, Origin: 0, Location: 1}
+		// S_2_3 := &forest.Symbol{Symbol: S, Origin: 2, Location: 3}
+		// S_1_3 := &forest.Symbol{Symbol: S, Origin: 1, Location: 3}
+		// S_SS_1_2 := &forest.Intermediate{Origin: 1, Location: 2}
+	})
+
 	t.Run("Scott2008_sec4_ex3", func(t *testing.T) {
 		// S -> AT | aT
 		// A -> a | BA
@@ -262,5 +317,12 @@ func TestForest(t *testing.T) {
 		require.Equal(t, a_0_1, A_0_1.Internal.Alternatives[0].Children[0])
 
 		require.Equal(t, 2, len(A_0_1.Internal.Alternatives[1].Children))
+		B_0_0, ok := A_0_1.Internal.Alternatives[1].Children[0].(*forest.Symbol)
+		require.True(t, ok)
+		require.Equal(t, B, B_0_0.Symbol)
+		require.Equal(t, 0, B_0_0.Origin)
+		require.Equal(t, 0, B_0_0.Location)
+
+		require.Equal(t, A_0_1, A_0_1.Internal.Alternatives[1].Children[1])
 	})
 }
