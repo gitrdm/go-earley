@@ -168,14 +168,11 @@ func TestForest(t *testing.T) {
 			(S,2,3) ->
 				(b,2,3)
 		*/
-		// S_0_3 := &forest.Symbol{Symbol: S, Origin: 0, Location: 3}
-		// S_SS_0_2 := &forest.Intermediate{Origin: 0, Location: 2}
-		// S_0_2 := &forest.Symbol{Symbol: S, Origin: 0, Location: 2}
-		// S_SS_0_1 := &forest.Intermediate{Origin: 0, Location: 1}
-		// S_0_1 := &forest.Symbol{Symbol: S, Origin: 0, Location: 1}
-		// S_2_3 := &forest.Symbol{Symbol: S, Origin: 2, Location: 3}
-		// S_1_3 := &forest.Symbol{Symbol: S, Origin: 1, Location: 3}
-		// S_SS_1_2 := &forest.Intermediate{Origin: 1, Location: 2}
+		root, ok := p.GetForestRoot()
+		require.True(t, ok)
+
+		S_0_3 := SymbolEqual(t, root, S, 0, 3)
+		require.NotNil(t, S_0_3)
 	})
 
 	t.Run("Scott2008_sec4_ex3", func(t *testing.T) {
@@ -325,4 +322,13 @@ func TestForest(t *testing.T) {
 
 		require.Equal(t, A_0_1, A_0_1.Internal.Alternatives[1].Children[1])
 	})
+}
+
+func SymbolEqual(t *testing.T, node forest.Node, sym grammar.Symbol, origin, location int) *forest.Symbol {
+	symbolNode, ok := node.(*forest.Symbol)
+	require.True(t, ok)
+	require.Equal(t, sym, symbolNode.Symbol)
+	require.Equal(t, origin, symbolNode.Origin)
+	require.Equal(t, location, symbolNode.Location)
+	return symbolNode
 }
