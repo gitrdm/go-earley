@@ -42,13 +42,11 @@ func (s *Set) find(dr *grammar.DottedRule, origin int) (*state.Normal, bool) {
 	if dr.Complete() {
 		return s.FindCompletion(dr, origin)
 	}
-	current, ok := dr.PostDotSymbol().Deconstruct()
-	if !ok {
-		return s.FindPrediction(dr, origin)
-	}
-	_, ok = current.(grammar.NonTerminal)
+	postDot, ok := dr.PostDotSymbol().Deconstruct()
 	if ok {
-		return s.FindPrediction(dr, origin)
+		if _, ok := postDot.(grammar.NonTerminal); ok {
+			return s.FindPrediction(dr, origin)
+		}
 	}
 	return s.FindScan(dr, origin)
 }
@@ -195,12 +193,28 @@ func (s *Set) addUniqueScan(scan *state.Normal) bool {
 	return true
 }
 
-func addUnique[T state.Normal | state.Transition](states []*T, item *T) ([]*T, bool) {
-	for _, s := range states {
-		if s == item {
-			return states, false
-		}
+func addUnique(states []*state.Normal, item *state.Normal) ([]*state.Normal, bool) {
+	if contains(states, item) {
+		return states, false
 	}
 	states = append(states, item)
 	return states, true
+}
+
+func contains(states []*state.Normal, item *state.Normal) bool {
+	found := false
+	for _, s := range states {
+		if equal(s, item) {
+			found = true
+			break
+		}
+	}
+	return found
+}
+
+func equal(n1 *state.Normal, n2 *state.Normal) bool {
+	if n1.Origin != n2.Origin {
+		return false
+	}
+	return n1.DottedRule.String() == n2.DottedRule.String()
 }

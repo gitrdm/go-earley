@@ -1,6 +1,8 @@
 package forest
 
 import (
+	"fmt"
+
 	"github.com/patrickhuber/go-earley/grammar"
 	"github.com/patrickhuber/go-earley/token"
 )
@@ -18,6 +20,10 @@ type Symbol struct {
 
 func (Symbol) node() {}
 
+func (s Symbol) String() string {
+	return fmt.Sprintf("(%s, %d, %d)", s.Symbol.String(), s.Origin, s.Location)
+}
+
 type Intermediate struct {
 	Rule     *grammar.DottedRule
 	Internal *Internal
@@ -27,6 +33,10 @@ type Intermediate struct {
 
 func (Intermediate) node() {}
 
+func (i Intermediate) String() string {
+	return fmt.Sprintf("(%s, %d, %d)", i.Rule.String(), i.Origin, i.Location)
+}
+
 type Token struct {
 	Token    token.Token
 	Origin   int
@@ -34,6 +44,10 @@ type Token struct {
 }
 
 func (Token) node() {}
+
+func (t Token) String() string {
+	return fmt.Sprintf("(%s, %d, %d)", t.Token.Type(), t.Origin, t.Location)
+}
 
 type Group struct {
 	Children []Node

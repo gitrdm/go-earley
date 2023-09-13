@@ -46,19 +46,23 @@ func (p *parser) initialize() {
 		production := start[s]
 		state := p.NewState(production, 0, 0)
 		p.chart.Enqueue(0, state)
+		fmt.Printf("%s : Init", state)
+		fmt.Println()
 	}
 	p.reductionPass(p.location)
 }
 
 func (p *parser) NewState(production *grammar.Production, position int, origin int) *state.Normal {
-	dr, ok := p.grammar.Rules.Get(production, position)
+	rule, ok := p.grammar.Rules.Get(production, position)
 	if !ok {
 		panic("invalid state")
 	}
-	return p.chart.GetOrCreate(origin, dr, origin)
+	return state.NewNormal(rule, origin)
 }
 
 func (p *parser) Pulse(tok token.Token) (bool, error) {
+	fmt.Printf("--------- %d ---------", p.location+1)
+	fmt.Println()
 	p.scanPass(p.Location(), tok)
 
 	tokenRecognized := len(p.chart.Sets) > p.Location()+1
@@ -67,8 +71,6 @@ func (p *parser) Pulse(tok token.Token) (bool, error) {
 	}
 
 	p.location++
-	fmt.Printf("--------- %d ---------", p.location)
-	fmt.Println()
 
 	p.reductionPass(p.location)
 	p.nodes.Clear()
@@ -136,14 +138,13 @@ func (parser *parser) reductionPass(location int) {
 			completion := set.Completions[c]
 			parser.complete(completion, location)
 			c++
-			continue
 		} else if p < len(set.Predictions) {
 			evidence := set.Predictions[p]
 			parser.predict(evidence, location)
 			p++
-			continue
+		} else {
+			resume = false
 		}
-		resume = false
 	}
 	parser.memoize(location)
 }
@@ -460,13 +461,14 @@ func (p *parser) createParseNode(
 	location int) forest.Node {
 
 	/*
-		if B == E {
+		B -> ax*D, j, i, w, v, V
+		if D is nil {
 			let s = B
 		}
 		else {
-			let s = (B -> ax.B)
+			let s = (B -> ax*D)
 		}
-		if a == E and B != E{
+		if a is nil and D is not nil{
 			let y = v
 		}
 		else {
@@ -476,21 +478,9 @@ func (p *parser) createParseNode(
 		}
 		return y
 	*/
-	anyPreDotRuleNil := false
-	if rule.Position > 1 {
-		preDotPrecursor := rule.Production.RightHandSide[rule.Position-2]
-		anyPreDotRuleNil = p.isSymbolTransitiveNullable(preDotPrecursor)
-	}
-
-	postDot := rule.PostDotSymbol()
-	anyPostDotRuleNil := postDot.IsNone() || p.isSymbolTransitiveNullable(postDot.Unwrap())
-	if anyPreDotRuleNil && !anyPostDotRuleNil {
-		return v
-	}
-
 	var internal *forest.Internal
 	var node forest.Node
-	if anyPostDotRuleNil {
+	if rule.Complete() {
 		symbol := p.nodes.AddOrGetExistingSymbolNode(
 			rule.Production.LeftHandSide,
 			origin,
@@ -514,15 +504,4 @@ func (p *parser) createParseNode(
 		internal.AddUniqueFamily(w, v)
 	}
 	return node
-}
-
-func (p *parser) isSymbolTransitiveNullable(sym grammar.Symbol) bool {
-	if sym == nil {
-		return true
-	}
-	nt, ok := sym.(grammar.NonTerminal)
-	if !ok {
-		return false
-	}
-	return p.grammar.IsTransativeNullable(nt)
 }
