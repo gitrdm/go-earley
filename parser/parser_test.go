@@ -137,13 +137,7 @@ func TestForest(t *testing.T) {
 
 		p := parser.New(g)
 		input := []*lexrule.String{b, b, b}
-		for i, sym := range input {
-			tok := token.FromString(sym.Value, i, sym.TokenType())
-			ok, err := p.Pulse(tok)
-			require.NoError(t, err)
-			require.True(t, ok)
-		}
-		require.True(t, p.Accepted())
+		RunParse(t, p, input)
 
 		/*
 			(S,0,3)	->
@@ -235,13 +229,7 @@ func TestForest(t *testing.T) {
 		g := grammar.New(S, productions...)
 		p := parser.New(g)
 		input := []*lexrule.String{a, b, b, b}
-		for i, sym := range input {
-			tok := token.FromString(sym.Value, i, sym.TokenType())
-			ok, err := p.Pulse(tok)
-			require.NoError(t, err)
-			require.True(t, ok)
-		}
-		require.True(t, p.Accepted())
+		RunParse(t, p, input)
 
 		root, ok := p.GetForestRoot()
 		require.True(t, ok)
@@ -309,8 +297,42 @@ func TestForest(t *testing.T) {
 			Alternative(B_0_0))
 		Equal(t, S_0_4, root)
 	})
+
+	t.Run("regex stub", func(t *testing.T) {
+		R := grammar.NewNonTerminal("R")
+		E := grammar.NewNonTerminal("E")
+		T := grammar.NewNonTerminal("T")
+		F := grammar.NewNonTerminal("F")
+		A := grammar.NewNonTerminal("A")
+		pipe := lexrule.NewString("|")
+		a := lexrule.NewString("a")
+
+		productions := []*grammar.Production{
+			grammar.NewProduction(R, E),
+			grammar.NewProduction(E, T),
+			grammar.NewProduction(E, T, pipe, E),
+			grammar.NewProduction(E),
+			grammar.NewProduction(T, F, T),
+			grammar.NewProduction(T, F),
+			grammar.NewProduction(F, A),
+			grammar.NewProduction(A, a),
+		}
+		g := grammar.New(R, productions...)
+		p := parser.New(g)
+		input := []*lexrule.String{a, a, a, a}
+		RunParse(t, p, input)
+	})
 }
 
+func RunParse(t *testing.T, p parser.Parser, input []*lexrule.String) {
+	for i, sym := range input {
+		tok := token.FromString(sym.Value, i, sym.TokenType())
+		ok, err := p.Pulse(tok)
+		require.NoError(t, err)
+		require.True(t, ok)
+	}
+	require.True(t, p.Accepted())
+}
 func Symbol(sym grammar.Symbol, origin, location int, alternatives ...*forest.Group) *forest.Symbol {
 	return &forest.Symbol{
 		Symbol:   sym,

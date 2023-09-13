@@ -153,6 +153,13 @@ func (p *parser) complete(completed *state.Normal, location int) {
 	set := p.chart.Sets[completed.Origin]
 	sym := completed.DottedRule.Production.LeftHandSide
 
+	if completed.Node == nil {
+		completed.Node = p.nodes.AddOrGetExistingSymbolNode(
+			completed.DottedRule.Production.LeftHandSide,
+			completed.Origin,
+			location)
+	}
+
 	trans, ok := set.FindTransition(sym)
 	if ok {
 		p.leoComplete(trans, location)
