@@ -196,7 +196,7 @@ func TestForest(t *testing.T) {
 		Edge(S_SS_1_2.Internal, S_1_2)
 		Edge(S_2_3.Internal, b_2_3)
 
-		Equal(t, root, S_0_3)
+		Equal(t, S_0_3, root)
 	})
 
 	t.Run("Scott2008_sec4_ex3", func(t *testing.T) {
@@ -386,6 +386,7 @@ func TestForest(t *testing.T) {
 		Edge(T_3_4.Internal, F_3_4)
 		Edge(F_3_4.Internal, A_3_4)
 		Edge(A_3_4.Internal, a_3_4)
+
 		Equal(t, R_0_4, root)
 	})
 }
