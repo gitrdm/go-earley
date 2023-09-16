@@ -185,25 +185,16 @@ func TestForest(t *testing.T) {
 		b_1_2 := Token(b, 1, 2)
 		b_2_3 := Token(b, 2, 3)
 
-		S_0_3.Internal.Alternatives = append(S_0_3.Internal.Alternatives,
-			Alternative(S_SS_0_2, S_2_3),
-			Alternative(S_SS_0_1, S_1_3))
-		S_SS_0_2.Internal.Alternatives = append(S_SS_0_2.Internal.Alternatives,
-			Alternative(S_0_2))
-		S_SS_0_1.Internal.Alternatives = append(S_SS_0_1.Internal.Alternatives,
-			Alternative(S_0_1))
-		S_0_1.Internal.Alternatives = append(S_0_1.Internal.Alternatives,
-			Alternative(b_0_1))
-		S_0_2.Internal.Alternatives = append(S_0_2.Internal.Alternatives,
-			Alternative(S_SS_0_1, S_1_2))
-		S_1_2.Internal.Alternatives = append(S_1_2.Internal.Alternatives,
-			Alternative(b_1_2))
-		S_1_3.Internal.Alternatives = append(S_1_3.Internal.Alternatives,
-			Alternative(S_SS_1_2, S_2_3))
-		S_SS_1_2.Internal.Alternatives = append(S_SS_1_2.Internal.Alternatives,
-			Alternative(S_1_2))
-		S_2_3.Internal.Alternatives = append(S_2_3.Internal.Alternatives,
-			Alternative(b_2_3))
+		Edge(S_0_3.Internal, S_SS_0_2, S_2_3)
+		Edge(S_0_3.Internal, S_SS_0_1, S_1_3)
+		Edge(S_SS_0_2.Internal, S_0_2)
+		Edge(S_SS_0_1.Internal, S_0_1)
+		Edge(S_0_1.Internal, b_0_1)
+		Edge(S_0_2.Internal, S_SS_0_1, S_1_2)
+		Edge(S_1_2.Internal, b_1_2)
+		Edge(S_1_3.Internal, S_SS_1_2, S_2_3)
+		Edge(S_SS_1_2.Internal, S_1_2)
+		Edge(S_2_3.Internal, b_2_3)
 
 		Equal(t, root, S_0_3)
 	})
@@ -277,25 +268,17 @@ func TestForest(t *testing.T) {
 		a_0_1 := Token(a, 0, 1)
 		b_1_2 := Token(b, 1, 2)
 		b_2_3 := Token(b, 2, 3)
+		Edge(S_0_4.Internal, S_aT_0_1, T_1_4)
+		Edge(S_0_4.Internal, S_AT_0_1, T_1_4)
+		Edge(S_aT_0_1.Internal, a_0_1)
+		Edge(T_1_4.Internal, T_bbb_1_3, b_2_3)
+		Edge(T_bbb_1_3.Internal, T_bbb_1_2, b_2_3)
+		Edge(T_bbb_1_2.Internal, b_1_2)
+		Edge(S_AT_0_1.Internal, A_0_1)
+		Edge(A_0_1.Internal, a_0_1)
+		Edge(A_0_1.Internal, A_BA_0_0, A_0_1)
+		Edge(A_BA_0_0.Internal, B_0_0)
 
-		S_0_4.Internal.Alternatives = append(S_0_4.Internal.Alternatives,
-			Alternative(S_aT_0_1, T_1_4),
-			Alternative(S_AT_0_1, T_1_4))
-		S_aT_0_1.Internal.Alternatives = append(S_aT_0_1.Internal.Alternatives,
-			Alternative(a_0_1))
-		T_1_4.Internal.Alternatives = append(T_1_4.Internal.Alternatives,
-			Alternative(T_bbb_1_3, b_2_3))
-		T_bbb_1_3.Internal.Alternatives = append(T_bbb_1_3.Internal.Alternatives,
-			Alternative(T_bbb_1_2, b_2_3))
-		T_bbb_1_2.Internal.Alternatives = append(T_bbb_1_2.Internal.Alternatives,
-			Alternative(b_1_2))
-		S_AT_0_1.Internal.Alternatives = append(S_AT_0_1.Internal.Alternatives,
-			Alternative(A_0_1))
-		A_0_1.Internal.Alternatives = append(A_0_1.Internal.Alternatives,
-			Alternative(a_0_1),
-			Alternative(A_BA_0_0, A_0_1))
-		A_BA_0_0.Internal.Alternatives = append(A_BA_0_0.Internal.Alternatives,
-			Alternative(B_0_0))
 		Equal(t, S_0_4, root)
 	})
 
