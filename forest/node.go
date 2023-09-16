@@ -24,6 +24,17 @@ func (s Symbol) String() string {
 	return fmt.Sprintf("(%s, %d, %d)", s.Symbol.String(), s.Origin, s.Location)
 }
 
+func (s *Symbol) Accept(v Visitor) {
+	v.VisitSymbol(s)
+	for _, alt := range s.Internal.Alternatives {
+		for _, child := range alt.Children {
+			if acceptor, ok := child.(Acceptor); ok {
+				acceptor.Accept(v)
+			}
+		}
+	}
+}
+
 type Intermediate struct {
 	Rule     *grammar.DottedRule
 	Internal *Internal
@@ -37,6 +48,17 @@ func (i Intermediate) String() string {
 	return fmt.Sprintf("(%s, %d, %d)", i.Rule.String(), i.Origin, i.Location)
 }
 
+func (i *Intermediate) Accept(v Visitor) {
+	v.VisitIntermediate(i)
+	for _, alt := range i.Internal.Alternatives {
+		for _, child := range alt.Children {
+			if acceptor, ok := child.(Acceptor); ok {
+				acceptor.Accept(v)
+			}
+		}
+	}
+}
+
 type Token struct {
 	Token    token.Token
 	Origin   int
@@ -47,6 +69,10 @@ func (Token) node() {}
 
 func (t Token) String() string {
 	return fmt.Sprintf("(%s, %d, %d)", t.Token.Type(), t.Origin, t.Location)
+}
+
+func (t *Token) Accept(v Visitor) {
+	v.VisitToken(t)
 }
 
 type Group struct {

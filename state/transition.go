@@ -2,7 +2,6 @@ package state
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/patrickhuber/go-earley/grammar"
 )
@@ -12,14 +11,17 @@ const (
 )
 
 type Transition struct {
-	Origin     int
+	// Origin is the origin of the cached item, not the origin of the transition state
+	Origin int
+	// DottedRule is the dotted rule of the cached item, not the dotted rule of the transition state
 	DottedRule *grammar.DottedRule
-	Symbol     grammar.Symbol
+	// Symbol is the transition symbol
+	Symbol grammar.Symbol
 }
 
 func (*Transition) Type() Type { return TransitionType }
 
 func (t *Transition) String() string {
-	return fmt.Sprintf("%s : %s, %s",
-		t.Symbol, t.DottedRule, strconv.Itoa(t.Origin))
+	return fmt.Sprintf("%s : %s, %d",
+		t.Symbol, t.DottedRule, t.Origin)
 }

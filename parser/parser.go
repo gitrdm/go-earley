@@ -19,17 +19,32 @@ type Parser interface {
 }
 
 type parser struct {
-	location int
-	grammar  *grammar.Grammar
-	chart    *chart.Chart
-	nodes    *forest.Set
+	location               int
+	grammar                *grammar.Grammar
+	chart                  *chart.Chart
+	nodes                  *forest.Set
+	optimizeRightRecursion bool
 }
 
-func New(g *grammar.Grammar) Parser {
+type Option func(*parser)
+
+// OptimizeRightRecursion optimizes right recursion
+// the default is true
+func OptimizeRightRecursion(ok bool) Option {
+	return func(p *parser) {
+		p.optimizeRightRecursion = ok
+	}
+}
+
+func New(g *grammar.Grammar, options ...Option) Parser {
 	p := &parser{
-		grammar: g,
-		chart:   chart.New(),
-		nodes:   &forest.Set{},
+		grammar:                g,
+		chart:                  chart.New(),
+		nodes:                  &forest.Set{},
+		optimizeRightRecursion: true,
+	}
+	for _, option := range options {
+		option(p)
 	}
 	p.initialize()
 	return p
@@ -44,7 +59,7 @@ func (p *parser) initialize() {
 
 	for s := 0; s < len(start); s += 1 {
 		production := start[s]
-		state := p.NewState(production, 0, 0)
+		state := p.newState(production, 0, 0)
 		p.chart.Enqueue(0, state)
 		fmt.Printf("%s : Init", state)
 		fmt.Println()
@@ -52,7 +67,7 @@ func (p *parser) initialize() {
 	p.reductionPass(p.location)
 }
 
-func (p *parser) NewState(production *grammar.Production, position int, origin int) *state.Normal {
+func (p *parser) newState(production *grammar.Production, position int, origin int) *state.Normal {
 	rule, ok := p.grammar.Rules.Get(production, position)
 	if !ok {
 		panic("invalid state")
@@ -119,7 +134,7 @@ func (p *parser) scan(s *state.Normal, j int, tok token.Token) {
 	parseNode := p.createParseNode(rule, s.Origin, s.Node, tokenNode, j+1)
 
 	// create a next from the dotted rule
-	next := p.NewState(rule.Production, rule.Position, s.Origin)
+	next := p.newState(rule.Production, rule.Position, s.Origin)
 	next.Node = parseNode
 	p.chart.Enqueue(j+1, next)
 	fmt.Printf("%s : Scan", next)
@@ -146,7 +161,9 @@ func (parser *parser) reductionPass(location int) {
 			resume = false
 		}
 	}
-	parser.memoize(location)
+	if parser.optimizeRightRecursion {
+		parser.memoize(location)
+	}
 }
 
 func (p *parser) complete(completed *state.Normal, location int) {
@@ -170,32 +187,19 @@ func (p *parser) complete(completed *state.Normal, location int) {
 
 func (p *parser) leoComplete(trans *state.Transition, location int) {
 
-	// jump to the set pointed to by the transition item
-	set := p.chart.Sets[trans.Origin]
+	dottedRule := trans.DottedRule
+	origin := trans.Origin
 
-	// find the top most item (the one that has trans.Sym as its predot symbol)
-	for _, c := range set.Completions {
-		sym, ok := c.DottedRule.PreDotSymbol().Deconstruct()
-		if !ok {
-			continue
-		}
-		if sym != trans.Symbol {
-			continue
-		}
-
-		// check if the item exists
-		if p.chart.Contains(location, state.NormalType, c.DottedRule, c.Origin) {
-			continue
-		}
-
-		// this is the top most item
-		topMostItem := p.NewState(c.DottedRule.Production, c.DottedRule.Position, c.Origin)
-		p.chart.Enqueue(location, topMostItem)
-		fmt.Printf("%s : Leo Complete", topMostItem)
-		fmt.Println()
-		// there will only be one of these
-		break
+	// check if the item exists
+	if p.chart.Contains(location, state.NormalType, dottedRule, origin) {
+		return
 	}
+
+	// this is the top most item
+	topMostItem := p.newState(dottedRule.Production, dottedRule.Position, origin)
+	p.chart.Enqueue(location, topMostItem)
+	fmt.Printf("%s : Leo Complete", topMostItem)
+	fmt.Println()
 }
 
 func (par *parser) earleyComplete(completed *state.Normal, location int) {
@@ -223,7 +227,7 @@ func (par *parser) earleyComplete(completed *state.Normal, location int) {
 			continue
 		}
 
-		state := par.NewState(rule.Production, rule.Position, origin)
+		state := par.newState(rule.Production, rule.Position, origin)
 		state.Node = node
 
 		par.chart.Enqueue(location, state)
@@ -289,21 +293,23 @@ func (parser *parser) memoize(location int) {
 		if ok {
 			// if so, copy it here
 			clone := &state.Transition{
-				Origin:     trans.Origin,
 				DottedRule: trans.DottedRule,
+				Origin:     trans.Origin,
 				Symbol:     trans.Symbol,
 			}
 			trans = clone
 		} else {
 			// otherwise create it
 			trans = &state.Transition{
-				Origin:     location,
 				DottedRule: next,
+				Origin:     normal.Origin,
 				Symbol:     postDot,
 			}
 		}
 
 		parser.chart.Enqueue(location, trans)
+		fmt.Printf("%s : Transition", trans.String())
+		fmt.Println()
 	}
 }
 
@@ -324,26 +330,6 @@ func (parser *parser) isQuasiComplete(rule *grammar.DottedRule) bool {
 		// page 4 leo paper
 		// check if S can derive S
 		if rule.Production.LeftHandSide == parser.grammar.Start && parser.grammar.Start == nt {
-			return false
-		}
-	}
-	return true
-}
-
-// isTransitiveComplete returns true if the rule is complete
-// or if every symbol between the dot and the end of the rule is transative null
-func (parser *parser) isTransativeComplete(rule *grammar.DottedRule) bool {
-	if rule.Complete() {
-		return true
-	}
-	// all postdot symbols are nullable
-	for i := rule.Position; i < len(rule.Production.RightHandSide); i++ {
-		sym := rule.Production.RightHandSide[i]
-		nt, ok := sym.(grammar.NonTerminal)
-		if !ok {
-			return false
-		}
-		if !parser.grammar.IsTransativeNullable(nt) {
 			return false
 		}
 	}
@@ -382,7 +368,7 @@ func (p *parser) predictProduction(location int, production *grammar.Production)
 	if p.chart.Contains(location, state.NormalType, rule, location) {
 		return
 	}
-	s := p.NewState(rule.Production, rule.Position, location)
+	s := p.newState(rule.Production, rule.Position, location)
 	p.chart.Enqueue(location, s)
 	fmt.Printf("%s : Predict", s)
 	fmt.Println()
@@ -396,7 +382,7 @@ func (p *parser) predictAycockHorspool(evidence *state.Normal, location int) {
 	if p.chart.Contains(location, evidence.Type(), next, evidence.Origin) {
 		return
 	}
-	state := p.NewState(next.Production, next.Position, evidence.Origin)
+	state := p.newState(next.Production, next.Position, evidence.Origin)
 
 	// create empty node
 	postDot := evidence.DottedRule.PostDotSymbol()

@@ -1,6 +1,7 @@
 package parser_test
 
 import (
+	"os"
 	"testing"
 
 	"github.com/patrickhuber/go-earley/forest"
@@ -318,9 +319,15 @@ func TestForest(t *testing.T) {
 			grammar.NewProduction(A, a),
 		}
 		g := grammar.New(R, productions...)
-		p := parser.New(g)
+		p := parser.New(g) //, parser.OptimizeRightRecursion(false))
 		input := []*lexrule.String{a, a, a, a}
 		RunParse(t, p, input)
+		root, ok := p.GetForestRoot()
+		require.True(t, ok)
+		printer := forest.NewPrinter(os.Stdout)
+		acceptor, ok := root.(forest.Acceptor)
+		require.True(t, ok)
+		acceptor.Accept(printer)
 	})
 }
 
@@ -333,6 +340,7 @@ func RunParse(t *testing.T, p parser.Parser, input []*lexrule.String) {
 	}
 	require.True(t, p.Accepted())
 }
+
 func Symbol(sym grammar.Symbol, origin, location int, alternatives ...*forest.Group) *forest.Symbol {
 	return &forest.Symbol{
 		Symbol:   sym,
