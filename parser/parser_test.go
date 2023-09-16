@@ -319,7 +319,7 @@ func TestForest(t *testing.T) {
 			grammar.NewProduction(A, a),
 		}
 		g := grammar.New(R, productions...)
-		p := parser.New(g) //, parser.OptimizeRightRecursion(false))
+		p := parser.New(g, parser.OptimizeRightRecursion(false))
 		input := []*lexrule.String{a, a, a, a}
 		RunParse(t, p, input)
 		root, ok := p.GetForestRoot()
@@ -328,6 +328,82 @@ func TestForest(t *testing.T) {
 		acceptor, ok := root.(forest.Acceptor)
 		require.True(t, ok)
 		acceptor.Accept(printer)
+
+		/*
+			(R, 0, 4) ->
+				(E, 0, 4)
+			(E, 0, 4) ->
+				(T, 0, 4)
+			(T, 0, 4) ->
+				(T -> F•T, 0, 1) (T, 1, 4)
+			(T -> F•T, 0, 1) ->
+				(F, 0, 1)
+			(F, 0, 1) ->
+				(A, 0, 1)
+			(A, 0, 1) ->
+				(a, 0, 1)
+			(T, 1, 4) ->
+				(T -> F•T, 1, 2) (T, 2, 4)
+			(T -> F•T, 1, 2) ->
+				(F, 1, 2)
+			(F, 1, 2) ->
+				(A, 1, 2)
+			(A, 1, 2) ->
+				(a, 1, 2)
+			(T, 2, 4) ->
+				(T -> F•T, 2, 3) (T, 3, 4)
+			(T -> F•T, 2, 3) ->
+				(F, 2, 3)
+			(F, 2, 3) ->
+				(A, 2, 3)
+			(A, 2, 3) ->
+				(a, 2, 3)
+			(T, 3, 4) ->
+				(F, 3, 4)
+			(F, 3, 4) ->
+				(A, 3, 4)
+			(A, 3, 4) ->
+				(a, 3, 4)
+		*/
+		R_0_4 := Symbol(R, 0, 4)
+		E_0_4 := Symbol(E, 0, 4)
+		T_0_4 := Symbol(T, 0, 4)
+		T_FT_0_1 := Intermediate(Rule(productions[4], 1), 0, 1)
+		T_1_4 := Symbol(T, 1, 4)
+		F_0_1 := Symbol(F, 0, 1)
+		A_0_1 := Symbol(A, 0, 1)
+		a_0_1 := Token(a, 0, 1)
+		T_FT_1_2 := Intermediate(Rule(productions[4], 1), 1, 2)
+		T_2_4 := Symbol(T, 2, 4)
+		F_1_2 := Symbol(F, 1, 2)
+		A_1_2 := Symbol(A, 1, 2)
+		a_1_2 := Token(a, 1, 2)
+		T_FT_2_3 := Intermediate(Rule(productions[4], 1), 2, 3)
+		T_3_4 := Symbol(T, 3, 4)
+		F_2_3 := Symbol(F, 2, 3)
+		A_2_3 := Symbol(A, 2, 3)
+		a_2_3 := Token(a, 2, 3)
+		F_3_4 := Symbol(F, 3, 4)
+		A_3_4 := Symbol(A, 3, 4)
+		a_3_4 := Token(a, 3, 4)
+		Edge(R_0_4.Internal, E_0_4)
+		Edge(E_0_4.Internal, T_0_4)
+		Edge(T_0_4.Internal, T_FT_0_1, T_1_4)
+		Edge(T_FT_0_1.Internal, F_0_1)
+		Edge(F_0_1.Internal, A_0_1)
+		Edge(A_0_1.Internal, a_0_1)
+		Edge(T_1_4.Internal, T_FT_1_2, T_2_4)
+		Edge(T_FT_1_2.Internal, F_1_2)
+		Edge(F_1_2.Internal, A_1_2)
+		Edge(A_1_2.Internal, a_1_2)
+		Edge(T_2_4.Internal, T_FT_2_3, T_3_4)
+		Edge(T_FT_2_3.Internal, F_2_3)
+		Edge(F_2_3.Internal, A_2_3)
+		Edge(A_2_3.Internal, a_2_3)
+		Edge(T_3_4.Internal, F_3_4)
+		Edge(F_3_4.Internal, A_3_4)
+		Edge(A_3_4.Internal, a_3_4)
+		Equal(t, R_0_4, root)
 	})
 }
 
@@ -377,107 +453,107 @@ func Alternative(nodes ...forest.Node) *forest.Group {
 	}
 }
 
-func Equal(t *testing.T, n1 forest.Node, n2 forest.Node) {
+func Equal(t *testing.T, expectedNode forest.Node, actualNode forest.Node) {
 	cache := map[forest.Node]struct{}{}
-	work1 := []forest.Node{n1}
-	work2 := []forest.Node{n2}
+	expectedWork := []forest.Node{expectedNode}
+	actualWork := []forest.Node{actualNode}
 
-	for len(work1) > 0 && len(work2) > 0 {
+	for len(expectedWork) > 0 && len(actualWork) > 0 {
 
-		n1 = work1[0]
-		work1 = work1[1:]
+		expectedNode = expectedWork[0]
+		expectedWork = expectedWork[1:]
 
-		n2 = work2[0]
-		work2 = work2[1:]
+		actualNode = actualWork[0]
+		actualWork = actualWork[1:]
 
-		_, ok := cache[n1]
+		_, ok := cache[expectedNode]
 		if ok {
 			continue
 		}
-		cache[n1] = struct{}{}
+		cache[expectedNode] = struct{}{}
 
-		var internal1 *forest.Internal
-		var internal2 *forest.Internal
+		var expectedInternal *forest.Internal
+		var actualInternal *forest.Internal
 
-		switch n := n1.(type) {
+		switch n := expectedNode.(type) {
 		case *forest.Intermediate:
-			i, ok := n2.(*forest.Intermediate)
-			require.True(t, ok, "%s != %s", n, n2)
+			i, ok := actualNode.(*forest.Intermediate)
+			require.True(t, ok, "%s != %s", n, actualNode)
 			IntermediateEqual(t, n, i)
-			internal1 = n.Internal
-			internal2 = i.Internal
+			expectedInternal = n.Internal
+			actualInternal = i.Internal
 		case *forest.Symbol:
-			s, ok := n2.(*forest.Symbol)
-			require.True(t, ok, "%s != %s", n, n2)
+			s, ok := actualNode.(*forest.Symbol)
+			require.True(t, ok, "%s != %s", n, actualNode)
 			SymbolEqual(t, n, s)
-			internal1 = n.Internal
-			internal2 = s.Internal
+			expectedInternal = n.Internal
+			actualInternal = s.Internal
 		case *forest.Token:
-			tok, ok := n2.(*forest.Token)
-			require.True(t, ok, "%s != %s", n, n2)
+			tok, ok := actualNode.(*forest.Token)
+			require.True(t, ok, "%s != %s", n, actualNode)
 			TokenEqual(t, n, tok)
 			return
 		}
 
-		InternalEqual(t, internal1, internal2)
-		for g := 0; g < len(internal1.Alternatives); g++ {
-			alt1 := internal1.Alternatives[g]
-			alt2 := internal2.Alternatives[g]
+		InternalEqual(t, expectedInternal, actualInternal)
+		for g := 0; g < len(expectedInternal.Alternatives); g++ {
+			alt1 := expectedInternal.Alternatives[g]
+			alt2 := actualInternal.Alternatives[g]
 			for c := 0; c < len(alt1.Children); c++ {
 				c1 := alt1.Children[c]
-				work1 = append(work1, c1)
+				expectedWork = append(expectedWork, c1)
 				c2 := alt2.Children[c]
-				work2 = append(work2, c2)
+				actualWork = append(actualWork, c2)
 			}
 		}
 	}
-	require.Equal(t, len(work1), len(work2))
+	require.Equal(t, len(expectedWork), len(actualWork))
 }
 
-func SymbolEqual(t *testing.T, s1, s2 *forest.Symbol) {
-	require.Equal(t, s1.Origin, s2.Origin, "%s != %s", s1.String(), s2.String())
-	require.Equal(t, s1.Location, s2.Location, "%s != %s", s1.String(), s2.String())
-	require.Equal(t, s1.Symbol, s2.Symbol, "%s != %s", s1.String(), s2.String())
+func SymbolEqual(t *testing.T, expected, actual *forest.Symbol) {
+	require.Equal(t, expected.Origin, actual.Origin, "%s != %s", expected.String(), actual.String())
+	require.Equal(t, expected.Location, actual.Location, "%s != %s", expected.String(), actual.String())
+	require.Equal(t, expected.Symbol, actual.Symbol, "%s != %s", expected.String(), actual.String())
 }
 
-func IntermediateEqual(t *testing.T, i1, i2 *forest.Intermediate) {
-	require.Equal(t, i1.Origin, i2.Origin, "%s != %s", i1.String(), i2.String())
-	require.Equal(t, i1.Location, i2.Location, "%s != %s", i1.String(), i2.String())
-	RuleEqual(t, i1.Rule, i2.Rule)
+func IntermediateEqual(t *testing.T, expected, actual *forest.Intermediate) {
+	require.Equal(t, expected.Origin, actual.Origin, "%s != %s", expected.String(), actual.String())
+	require.Equal(t, expected.Location, actual.Location, "%s != %s", expected.String(), actual.String())
+	RuleEqual(t, expected.Rule, actual.Rule)
 }
 
-func InternalEqual(t *testing.T, i1, i2 *forest.Internal) {
-	if i1 == nil && i2 == nil {
+func InternalEqual(t *testing.T, expected, actual *forest.Internal) {
+	if expected == nil && actual == nil {
 		return
 	}
-	require.NotNil(t, i1)
-	require.NotNil(t, i2)
-	require.Equal(t, len(i1.Alternatives), len(i2.Alternatives))
-	for i := 0; i < len(i1.Alternatives); i++ {
-		alt1 := i1.Alternatives[i]
-		alt2 := i2.Alternatives[i]
-		require.Equal(t, len(alt1.Children), len(alt2.Children))
+	require.NotNil(t, expected)
+	require.NotNil(t, actual)
+	require.Equal(t, len(expected.Alternatives), len(actual.Alternatives))
+	for i := 0; i < len(expected.Alternatives); i++ {
+		expectedAlternative := expected.Alternatives[i]
+		actualAlternative := actual.Alternatives[i]
+		require.Equal(t, len(expectedAlternative.Children), len(actualAlternative.Children))
 	}
 }
 
-func RuleEqual(t *testing.T, one *grammar.DottedRule, two *grammar.DottedRule) {
-	require.Equal(t, one.Position, two.Position)
-	ProductionEqual(t, one.Production, two.Production)
+func RuleEqual(t *testing.T, expected *grammar.DottedRule, actual *grammar.DottedRule) {
+	require.Equal(t, expected.Position, actual.Position)
+	ProductionEqual(t, expected.Production, actual.Production)
 }
 
-func ProductionEqual(t *testing.T, one *grammar.Production, two *grammar.Production) {
-	require.Equal(t, one.LeftHandSide, two.LeftHandSide)
-	require.Equal(t, len(one.RightHandSide), len(two.RightHandSide))
-	for i := 0; i < len(one.RightHandSide); i++ {
-		require.Equal(t, one.RightHandSide[i], two.RightHandSide[i])
+func ProductionEqual(t *testing.T, expected *grammar.Production, actual *grammar.Production) {
+	require.Equal(t, expected.LeftHandSide, actual.LeftHandSide)
+	require.Equal(t, len(expected.RightHandSide), len(actual.RightHandSide))
+	for i := 0; i < len(expected.RightHandSide); i++ {
+		require.Equal(t, expected.RightHandSide[i], actual.RightHandSide[i])
 	}
 }
 
-func TokenEqual(t *testing.T, t1, t2 *forest.Token) {
-	require.Equal(t, t1.Location, t2.Location, "%s != %s", t1.String(), t2.String())
-	require.Equal(t, t1.Origin, t2.Origin, "%s != %s", t1.String(), t2.String())
-	require.Equal(t, t1.Token.Type(), t2.Token.Type(), "%s != %s", t1.String(), t2.String())
-	require.Equal(t, t1.Token.Position(), t2.Token.Position(), "%s != %s", t1.String(), t2.String())
+func TokenEqual(t *testing.T, expected, actual *forest.Token) {
+	require.Equal(t, expected.Location, actual.Location, "%s != %s", expected.String(), actual.String())
+	require.Equal(t, expected.Origin, actual.Origin, "%s != %s", expected.String(), actual.String())
+	require.Equal(t, expected.Token.Type(), actual.Token.Type(), "%s != %s", expected.String(), actual.String())
+	require.Equal(t, expected.Token.Position(), actual.Token.Position(), "%s != %s", expected.String(), actual.String())
 }
 
 func Rule(production *grammar.Production, position int) *grammar.DottedRule {
@@ -485,4 +561,10 @@ func Rule(production *grammar.Production, position int) *grammar.DottedRule {
 		Production: production,
 		Position:   position,
 	}
+}
+
+func Edge(internal *forest.Internal, nodes ...forest.Node) {
+	internal.Alternatives = append(internal.Alternatives,
+		Alternative(nodes...),
+	)
 }
