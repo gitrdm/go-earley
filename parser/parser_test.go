@@ -302,7 +302,7 @@ func TestForest(t *testing.T) {
 			grammar.NewProduction(A, a),
 		}
 		g := grammar.New(R, productions...)
-		p := parser.New(g, parser.OptimizeRightRecursion(false))
+		p := parser.New(g, parser.OptimizeRightRecursion(true))
 		input := []*lexrule.String{a, a, a, a}
 		RunParse(t, p, input)
 		root, ok := p.GetForestRoot()
@@ -388,6 +388,35 @@ func TestForest(t *testing.T) {
 		Edge(A_3_4.Internal, a_3_4)
 
 		Equal(t, R_0_4, root)
+	})
+
+	t.Run("leo 1", func(t *testing.T) {
+		A := grammar.NewNonTerminal("A")
+		a := lexrule.NewString("a")
+
+		// A -> A 'a'
+		// A ->
+		g := grammar.New(A,
+			grammar.NewProduction(A, a, A),
+			grammar.NewProduction(A),
+		)
+
+		p := parser.New(g, parser.OptimizeRightRecursion(true))
+		for i := 0; i < 4; i++ {
+			tok := token.FromString("a", i, a.TokenType())
+			ok, err := p.Pulse(tok)
+			require.NoError(t, err, "loop %d", i)
+			require.True(t, ok, "loop %d", i)
+		}
+		require.True(t, p.Accepted())
+
+		root, ok := p.GetForestRoot()
+		require.True(t, ok)
+
+		printer := forest.NewPrinter(os.Stdout)
+		acceptor, ok := root.(forest.Acceptor)
+		require.True(t, ok)
+		acceptor.Accept(printer)
 	})
 }
 

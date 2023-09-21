@@ -197,6 +197,11 @@ func (p *parser) leoComplete(trans *state.Transition, location int) {
 
 	// this is the top most item
 	topMostItem := p.newState(dottedRule.Production, dottedRule.Position, origin)
+	topMostItem.Node = p.nodes.AddOrGetExistingSymbolNode(
+		dottedRule.Production.LeftHandSide,
+		origin,
+		location)
+
 	p.chart.Enqueue(location, topMostItem)
 	fmt.Printf("%s : Leo Complete", topMostItem)
 	fmt.Println()
@@ -248,6 +253,12 @@ func (parser *parser) memoize(location int) {
 	for _, p := range set.Predictions {
 		rule := p.DottedRule
 		postDotSymbol, ok := rule.PostDotSymbol().Deconstruct()
+		if !ok {
+			continue
+		}
+
+		// if postdot is terminal, skip
+		_, ok = postDotSymbol.(grammar.NonTerminal)
 		if !ok {
 			continue
 		}
@@ -387,8 +398,8 @@ func (p *parser) predictAycockHorspool(evidence *state.Normal, location int) {
 	// create empty node
 	postDot := evidence.DottedRule.PostDotSymbol()
 	if postDot.IsSome() {
-		emptyNode := p.nodes.AddOrGetExistingSymbolNode(postDot.Unwrap(), location, location)
-		state.Node = emptyNode
+		node := p.nodes.AddOrGetExistingSymbolNode(postDot.Unwrap(), evidence.Origin, location)
+		state.Node = node
 	}
 
 	p.chart.Enqueue(location, state)
