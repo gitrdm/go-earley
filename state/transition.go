@@ -3,6 +3,7 @@ package state
 import (
 	"fmt"
 
+	"github.com/patrickhuber/go-earley/forest"
 	"github.com/patrickhuber/go-earley/grammar"
 )
 
@@ -17,6 +18,12 @@ type Transition struct {
 	DottedRule *grammar.DottedRule
 	// Symbol is the transition symbol
 	Symbol grammar.Symbol
+
+	next *Transition
+
+	Predict *Normal
+
+	Root int
 }
 
 func (*Transition) Type() Type { return TransitionType }
@@ -24,4 +31,16 @@ func (*Transition) Type() Type { return TransitionType }
 func (t *Transition) String() string {
 	return fmt.Sprintf("%s : %s, %d",
 		t.Symbol, t.DottedRule, t.Origin)
+}
+
+func (t *Transition) Next() forest.Path {
+	return t.next
+}
+
+func (t *Transition) SetNext(next *Transition) {
+	t.next = next
+}
+
+func (t *Transition) Node() forest.Node {
+	return t.Predict.Node
 }

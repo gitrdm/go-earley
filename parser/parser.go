@@ -179,13 +179,13 @@ func (p *parser) complete(completed *state.Normal, location int) {
 
 	trans, ok := set.FindTransition(sym)
 	if ok {
-		p.leoComplete(trans, location)
+		p.leoComplete(completed, trans, location)
 	} else {
 		p.earleyComplete(completed, location)
 	}
 }
 
-func (p *parser) leoComplete(trans *state.Transition, location int) {
+func (p *parser) leoComplete(completed *state.Normal, trans *state.Transition, location int) {
 
 	dottedRule := trans.DottedRule
 	origin := trans.Origin
@@ -196,14 +196,19 @@ func (p *parser) leoComplete(trans *state.Transition, location int) {
 	}
 
 	// this is the top most item
-	topMostItem := p.newState(dottedRule.Production, dottedRule.Position, origin)
-	topMostItem.Node = p.nodes.AddOrGetExistingSymbolNode(
-		dottedRule.Production.LeftHandSide,
-		origin,
-		location)
+	top := p.newState(dottedRule.Production, dottedRule.Position, origin)
+	node := p.nodes.AddOrGetExistingSymbolNode(dottedRule.Production.LeftHandSide, origin, location)
+	top.Node = node
 
-	p.chart.Enqueue(location, topMostItem)
-	fmt.Printf("%s : Leo Complete", topMostItem)
+	root, ok := p.chart.Sets[trans.Root].FindTransition(trans.Symbol)
+	if !ok {
+		root = trans
+	}
+	node.AddPath(root, completed.Node)
+
+	p.chart.Enqueue(location, top)
+
+	fmt.Printf("%s : Leo Complete", top)
 	fmt.Println()
 }
 
@@ -295,33 +300,54 @@ func (parser *parser) memoize(location int) {
 			continue
 		}
 
-		// find the set where this state originated
-		set := parser.chart.Sets[normal.Origin]
-
-		// is there a transition?
-		trans, ok := set.FindTransition(postDot)
-
-		if ok {
-			// if so, copy it here
-			clone := &state.Transition{
-				DottedRule: trans.DottedRule,
-				Origin:     trans.Origin,
-				Symbol:     trans.Symbol,
-			}
-			trans = clone
-		} else {
-			// otherwise create it
-			trans = &state.Transition{
-				DottedRule: next,
-				Origin:     normal.Origin,
-				Symbol:     postDot,
-			}
+		// create the transition
+		trans, ok := parser.NewTransition(normal, normal.Origin, location)
+		if !ok {
+			continue
 		}
 
+		// add the transition
 		parser.chart.Enqueue(location, trans)
+
+		// log the transistion creation
 		fmt.Printf("%s : Transition", trans.String())
 		fmt.Println()
 	}
+}
+
+func (parser *parser) NewTransition(predict *state.Normal, origin int, location int) (*state.Transition, bool) {
+	sym, ok := predict.DottedRule.PostDotSymbol().Deconstruct()
+	if !ok {
+		return nil, ok
+	}
+	trans, ok := parser.chart.Sets[origin].FindTransition(sym)
+	if ok {
+		// if so, copy it here
+		clone := &state.Transition{
+			DottedRule: trans.DottedRule,
+			Origin:     trans.Origin,
+			Symbol:     trans.Symbol,
+			Predict:    predict,
+			Root:       trans.Root,
+		}
+		trans.SetNext(clone)
+		trans = clone
+
+	} else {
+		next, ok := parser.grammar.Rules.Next(predict.DottedRule)
+		if !ok {
+			return nil, ok
+		}
+		// otherwise create it
+		trans = &state.Transition{
+			DottedRule: next,
+			Origin:     predict.Origin,
+			Symbol:     sym,
+			Predict:    predict,
+			Root:       location,
+		}
+	}
+	return trans, true
 }
 
 func (parser *parser) isQuasiComplete(rule *grammar.DottedRule) bool {
@@ -482,7 +508,7 @@ func (p *parser) createParseNode(
 		}
 		return y
 	*/
-	var internal *forest.Internal
+	var internal forest.Internal
 	var node forest.Node
 	if rule.Complete() {
 		symbol := p.nodes.AddOrGetExistingSymbolNode(
@@ -491,7 +517,7 @@ func (p *parser) createParseNode(
 			location,
 		)
 		node = symbol
-		internal = symbol.Internal
+		internal = symbol
 	} else {
 		intermediate := p.nodes.AddOrGetExistingIntermediateNode(
 			rule,
@@ -499,7 +525,7 @@ func (p *parser) createParseNode(
 			location,
 		)
 		node = intermediate
-		internal = intermediate.Internal
+		internal = intermediate
 	}
 
 	if w == nil {

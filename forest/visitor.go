@@ -31,7 +31,7 @@ func (p *Printer) VisitToken(t *Token) {
 	if _, ok := p.cache[t]; ok {
 		return
 	}
-	fmt.Fprintf(p.writer, "(%s, %d, %d)", t.Token.Type(), t.Origin, t.Location)
+	fmt.Fprintf(p.writer, "(%s, %d, %d)", t.Token.Type(), t.Origin(), t.Location())
 	p.cache[t] = struct{}{}
 }
 
@@ -40,12 +40,12 @@ func (p *Printer) VisitIntermediate(i *Intermediate) {
 		return
 	}
 	p.PrintIntermediate(i)
-	p.PrintInternal(i.Internal)
+	p.PrintInternal(i)
 	p.cache[i] = struct{}{}
 }
 
 func (p *Printer) PrintIntermediate(i *Intermediate) {
-	fmt.Fprintf(p.writer, "(%s, %d, %d)", i.Rule.String(), i.Origin, i.Location)
+	fmt.Fprintf(p.writer, "(%s, %d, %d)", i.Rule.String(), i.Origin(), i.Location())
 }
 
 func (p *Printer) VisitSymbol(s *Symbol) {
@@ -53,21 +53,21 @@ func (p *Printer) VisitSymbol(s *Symbol) {
 		return
 	}
 	p.PrintSymbol(s)
-	p.PrintInternal(s.Internal)
+	p.PrintInternal(s)
 	p.cache[s] = struct{}{}
 }
 
 func (p *Printer) PrintSymbol(s *Symbol) {
-	fmt.Fprintf(p.writer, "(%s, %d, %d)", s.Symbol.String(), s.Origin, s.Location)
+	fmt.Fprintf(p.writer, "(%s, %d, %d)", s.Symbol.String(), s.Origin(), s.Location())
 }
 
-func (p *Printer) PrintInternal(i *Internal) {
+func (p *Printer) PrintInternal(i Internal) {
 	fmt.Fprintf(p.writer, " -> ")
-	for i, alt := range i.Alternatives {
+	for i, alt := range i.Alternatives() {
 		if i > 0 {
 			fmt.Fprint(p.writer, "\t| ")
 		}
-		for _, child := range alt.Children {
+		for _, child := range alt.Children() {
 			switch c := child.(type) {
 			case *Symbol:
 				p.PrintSymbol(c)

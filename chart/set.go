@@ -10,8 +10,7 @@ type Set struct {
 	Scans       []*state.Normal
 	Completions []*state.Normal
 	Transitions map[grammar.Symbol]*state.Transition
-
-	Location int
+	Location    int
 
 	reductions map[grammar.Symbol][]*state.Normal
 }

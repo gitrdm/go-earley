@@ -185,16 +185,16 @@ func TestForest(t *testing.T) {
 		b_1_2 := Token(b, 1, 2)
 		b_2_3 := Token(b, 2, 3)
 
-		Edge(S_0_3.Internal, S_SS_0_2, S_2_3)
-		Edge(S_0_3.Internal, S_SS_0_1, S_1_3)
-		Edge(S_SS_0_2.Internal, S_0_2)
-		Edge(S_SS_0_1.Internal, S_0_1)
-		Edge(S_0_1.Internal, b_0_1)
-		Edge(S_0_2.Internal, S_SS_0_1, S_1_2)
-		Edge(S_1_2.Internal, b_1_2)
-		Edge(S_1_3.Internal, S_SS_1_2, S_2_3)
-		Edge(S_SS_1_2.Internal, S_1_2)
-		Edge(S_2_3.Internal, b_2_3)
+		Edge(S_0_3, S_SS_0_2, S_2_3)
+		Edge(S_0_3, S_SS_0_1, S_1_3)
+		Edge(S_SS_0_2, S_0_2)
+		Edge(S_SS_0_1, S_0_1)
+		Edge(S_0_1, b_0_1)
+		Edge(S_0_2, S_SS_0_1, S_1_2)
+		Edge(S_1_2, b_1_2)
+		Edge(S_1_3, S_SS_1_2, S_2_3)
+		Edge(S_SS_1_2, S_1_2)
+		Edge(S_2_3, b_2_3)
 
 		Equal(t, S_0_3, root)
 	})
@@ -268,16 +268,16 @@ func TestForest(t *testing.T) {
 		a_0_1 := Token(a, 0, 1)
 		b_1_2 := Token(b, 1, 2)
 		b_2_3 := Token(b, 2, 3)
-		Edge(S_0_4.Internal, S_aT_0_1, T_1_4)
-		Edge(S_0_4.Internal, S_AT_0_1, T_1_4)
-		Edge(S_aT_0_1.Internal, a_0_1)
-		Edge(T_1_4.Internal, T_bbb_1_3, b_2_3)
-		Edge(T_bbb_1_3.Internal, T_bbb_1_2, b_2_3)
-		Edge(T_bbb_1_2.Internal, b_1_2)
-		Edge(S_AT_0_1.Internal, A_0_1)
-		Edge(A_0_1.Internal, a_0_1)
-		Edge(A_0_1.Internal, A_BA_0_0, A_0_1)
-		Edge(A_BA_0_0.Internal, B_0_0)
+		Edge(S_0_4, S_aT_0_1, T_1_4)
+		Edge(S_0_4, S_AT_0_1, T_1_4)
+		Edge(S_aT_0_1, a_0_1)
+		Edge(T_1_4, T_bbb_1_3, b_2_3)
+		Edge(T_bbb_1_3, T_bbb_1_2, b_2_3)
+		Edge(T_bbb_1_2, b_1_2)
+		Edge(S_AT_0_1, A_0_1)
+		Edge(A_0_1, a_0_1)
+		Edge(A_0_1, A_BA_0_0, A_0_1)
+		Edge(A_BA_0_0, B_0_0)
 
 		Equal(t, S_0_4, root)
 	})
@@ -369,23 +369,23 @@ func TestForest(t *testing.T) {
 		F_3_4 := Symbol(F, 3, 4)
 		A_3_4 := Symbol(A, 3, 4)
 		a_3_4 := Token(a, 3, 4)
-		Edge(R_0_4.Internal, E_0_4)
-		Edge(E_0_4.Internal, T_0_4)
-		Edge(T_0_4.Internal, T_FT_0_1, T_1_4)
-		Edge(T_FT_0_1.Internal, F_0_1)
-		Edge(F_0_1.Internal, A_0_1)
-		Edge(A_0_1.Internal, a_0_1)
-		Edge(T_1_4.Internal, T_FT_1_2, T_2_4)
-		Edge(T_FT_1_2.Internal, F_1_2)
-		Edge(F_1_2.Internal, A_1_2)
-		Edge(A_1_2.Internal, a_1_2)
-		Edge(T_2_4.Internal, T_FT_2_3, T_3_4)
-		Edge(T_FT_2_3.Internal, F_2_3)
-		Edge(F_2_3.Internal, A_2_3)
-		Edge(A_2_3.Internal, a_2_3)
-		Edge(T_3_4.Internal, F_3_4)
-		Edge(F_3_4.Internal, A_3_4)
-		Edge(A_3_4.Internal, a_3_4)
+		Edge(R_0_4, E_0_4)
+		Edge(E_0_4, T_0_4)
+		Edge(T_0_4, T_FT_0_1, T_1_4)
+		Edge(T_FT_0_1, F_0_1)
+		Edge(F_0_1, A_0_1)
+		Edge(A_0_1, a_0_1)
+		Edge(T_1_4, T_FT_1_2, T_2_4)
+		Edge(T_FT_1_2, F_1_2)
+		Edge(F_1_2, A_1_2)
+		Edge(A_1_2, a_1_2)
+		Edge(T_2_4, T_FT_2_3, T_3_4)
+		Edge(T_FT_2_3, F_2_3)
+		Edge(F_2_3, A_2_3)
+		Edge(A_2_3, a_2_3)
+		Edge(T_3_4, F_3_4)
+		Edge(F_3_4, A_3_4)
+		Edge(A_3_4, a_3_4)
 
 		Equal(t, R_0_4, root)
 	})
@@ -430,40 +430,20 @@ func RunParse(t *testing.T, p parser.Parser, input []*lexrule.String) {
 	require.True(t, p.Accepted())
 }
 
-func Symbol(sym grammar.Symbol, origin, location int, alternatives ...*forest.Group) *forest.Symbol {
-	return &forest.Symbol{
-		Symbol:   sym,
-		Origin:   origin,
-		Location: location,
-		Internal: &forest.Internal{
-			Alternatives: alternatives,
-		},
-	}
+func Symbol(sym grammar.Symbol, origin, location int, alternatives ...forest.Group) *forest.Symbol {
+	return forest.NewSymbol(sym, origin, location, alternatives...)
 }
 
-func Intermediate(rule *grammar.DottedRule, origin, location int, alternatives ...*forest.Group) *forest.Intermediate {
-	return &forest.Intermediate{
-		Origin:   origin,
-		Location: location,
-		Rule:     rule,
-		Internal: &forest.Internal{
-			Alternatives: alternatives,
-		},
-	}
+func Intermediate(rule *grammar.DottedRule, origin, location int, alternatives ...forest.Group) *forest.Intermediate {
+	return forest.NewIntermediate(rule, origin, location, alternatives...)
 }
 
 func Token(rule grammar.LexerRule, origin, location int) *forest.Token {
-	return &forest.Token{
-		Token:    token.FromString(rule.String(), origin, rule.TokenType()),
-		Origin:   origin,
-		Location: location,
-	}
+	return forest.NewToken(token.FromString(rule.String(), origin, rule.TokenType()), origin, location)
 }
 
-func Alternative(nodes ...forest.Node) *forest.Group {
-	return &forest.Group{
-		Children: nodes,
-	}
+func Alternative(nodes ...forest.Node) forest.Group {
+	return forest.NewGroup(nodes...)
 }
 
 func Equal(t *testing.T, expectedNode forest.Node, actualNode forest.Node) {
@@ -485,22 +465,22 @@ func Equal(t *testing.T, expectedNode forest.Node, actualNode forest.Node) {
 		}
 		cache[expectedNode] = struct{}{}
 
-		var expectedInternal *forest.Internal
-		var actualInternal *forest.Internal
+		var expectedInternal forest.Internal
+		var actualInternal forest.Internal
 
 		switch n := expectedNode.(type) {
 		case *forest.Intermediate:
 			i, ok := actualNode.(*forest.Intermediate)
 			require.True(t, ok, "%s != %s", n, actualNode)
 			IntermediateEqual(t, n, i)
-			expectedInternal = n.Internal
-			actualInternal = i.Internal
+			expectedInternal = n
+			actualInternal = i
 		case *forest.Symbol:
 			s, ok := actualNode.(*forest.Symbol)
 			require.True(t, ok, "%s != %s", n, actualNode)
 			SymbolEqual(t, n, s)
-			expectedInternal = n.Internal
-			actualInternal = s.Internal
+			expectedInternal = n
+			actualInternal = s
 		case *forest.Token:
 			tok, ok := actualNode.(*forest.Token)
 			require.True(t, ok, "%s != %s", n, actualNode)
@@ -509,13 +489,13 @@ func Equal(t *testing.T, expectedNode forest.Node, actualNode forest.Node) {
 		}
 
 		InternalEqual(t, expectedInternal, actualInternal)
-		for g := 0; g < len(expectedInternal.Alternatives); g++ {
-			alt1 := expectedInternal.Alternatives[g]
-			alt2 := actualInternal.Alternatives[g]
-			for c := 0; c < len(alt1.Children); c++ {
-				c1 := alt1.Children[c]
+		for g := 0; g < len(expectedInternal.Alternatives()); g++ {
+			alt1 := expectedInternal.Alternatives()[g]
+			alt2 := actualInternal.Alternatives()[g]
+			for c := 0; c < len(alt1.Children()); c++ {
+				c1 := alt1.Children()[c]
 				expectedWork = append(expectedWork, c1)
-				c2 := alt2.Children[c]
+				c2 := alt2.Children()[c]
 				actualWork = append(actualWork, c2)
 			}
 		}
@@ -524,28 +504,28 @@ func Equal(t *testing.T, expectedNode forest.Node, actualNode forest.Node) {
 }
 
 func SymbolEqual(t *testing.T, expected, actual *forest.Symbol) {
-	require.Equal(t, expected.Origin, actual.Origin, "%s != %s", expected.String(), actual.String())
-	require.Equal(t, expected.Location, actual.Location, "%s != %s", expected.String(), actual.String())
+	require.Equal(t, expected.Origin(), actual.Origin(), "%s != %s", expected.String(), actual.String())
+	require.Equal(t, expected.Location(), actual.Location(), "%s != %s", expected.String(), actual.String())
 	require.Equal(t, expected.Symbol, actual.Symbol, "%s != %s", expected.String(), actual.String())
 }
 
 func IntermediateEqual(t *testing.T, expected, actual *forest.Intermediate) {
-	require.Equal(t, expected.Origin, actual.Origin, "%s != %s", expected.String(), actual.String())
-	require.Equal(t, expected.Location, actual.Location, "%s != %s", expected.String(), actual.String())
+	require.Equal(t, expected.Origin(), actual.Origin(), "%s != %s", expected.String(), actual.String())
+	require.Equal(t, expected.Location(), actual.Location(), "%s != %s", expected.String(), actual.String())
 	RuleEqual(t, expected.Rule, actual.Rule)
 }
 
-func InternalEqual(t *testing.T, expected, actual *forest.Internal) {
+func InternalEqual(t *testing.T, expected, actual forest.Internal) {
 	if expected == nil && actual == nil {
 		return
 	}
 	require.NotNil(t, expected)
 	require.NotNil(t, actual)
-	require.Equal(t, len(expected.Alternatives), len(actual.Alternatives))
-	for i := 0; i < len(expected.Alternatives); i++ {
-		expectedAlternative := expected.Alternatives[i]
-		actualAlternative := actual.Alternatives[i]
-		require.Equal(t, len(expectedAlternative.Children), len(actualAlternative.Children))
+	require.Equal(t, len(expected.Alternatives()), len(actual.Alternatives()), "%s != %s", expected, actual)
+	for i := 0; i < len(expected.Alternatives()); i++ {
+		expectedAlternative := expected.Alternatives()[i]
+		actualAlternative := actual.Alternatives()[i]
+		require.Equal(t, len(expectedAlternative.Children()), len(actualAlternative.Children()))
 	}
 }
 
@@ -563,8 +543,8 @@ func ProductionEqual(t *testing.T, expected *grammar.Production, actual *grammar
 }
 
 func TokenEqual(t *testing.T, expected, actual *forest.Token) {
-	require.Equal(t, expected.Location, actual.Location, "%s != %s", expected.String(), actual.String())
-	require.Equal(t, expected.Origin, actual.Origin, "%s != %s", expected.String(), actual.String())
+	require.Equal(t, expected.Location(), actual.Location(), "%s != %s", expected.String(), actual.String())
+	require.Equal(t, expected.Origin(), actual.Origin(), "%s != %s", expected.String(), actual.String())
 	require.Equal(t, expected.Token.Type(), actual.Token.Type(), "%s != %s", expected.String(), actual.String())
 	require.Equal(t, expected.Token.Position(), actual.Token.Position(), "%s != %s", expected.String(), actual.String())
 }
@@ -576,8 +556,10 @@ func Rule(production *grammar.Production, position int) *grammar.DottedRule {
 	}
 }
 
-func Edge(internal *forest.Internal, nodes ...forest.Node) {
-	internal.Alternatives = append(internal.Alternatives,
-		Alternative(nodes...),
-	)
+func Edge(internal forest.Internal, nodes ...forest.Node) {
+	if len(nodes) == 2 {
+		internal.AddUniqueFamily(nodes[0], nodes[1])
+	} else if len(nodes) == 1 {
+		internal.AddUniqueFamily(nodes[0], nil)
+	}
 }

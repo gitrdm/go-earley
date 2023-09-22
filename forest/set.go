@@ -19,21 +19,16 @@ func (s *Set) AddOrGetExistingSymbolNode(
 		if symbol.Symbol != sym {
 			continue
 		}
-		if symbol.Origin != origin {
+		if symbol.origin != origin {
 			continue
 		}
-		if symbol.Location != location {
+		if symbol.location != location {
 			continue
 		}
 		return symbol
 	}
 	// not found, so create it
-	symbol := &Symbol{
-		Symbol:   sym,
-		Origin:   origin,
-		Location: location,
-		Internal: &Internal{},
-	}
+	symbol := NewSymbol(sym, origin, location)
 	s.Symbols = append(s.Symbols, symbol)
 	return symbol
 }
@@ -46,20 +41,15 @@ func (s *Set) AddOrGetExistingIntermediateNode(
 		if intermediate.Rule != rule {
 			continue
 		}
-		if intermediate.Origin != origin {
+		if intermediate.origin != origin {
 			continue
 		}
-		if intermediate.Location != location {
+		if intermediate.location != location {
 			continue
 		}
 		return intermediate
 	}
-	intermediate := &Intermediate{
-		Rule:     rule,
-		Origin:   origin,
-		Location: location,
-		Internal: &Internal{},
-	}
+	intermediate := NewIntermediate(rule, origin, location)
 	s.Intermediates = append(s.Intermediates, intermediate)
 	return intermediate
 }
@@ -69,15 +59,15 @@ func (s *Set) AddOrGetExistingTokenNode(tok token.Token, location int) *Token {
 		if token.Token != tok {
 			continue
 		}
-		if token.Location != location {
+		if token.location != location {
 			continue
 		}
 		return token
 	}
 	token := &Token{
 		Token:    tok,
-		Origin:   tok.Position(),
-		Location: location,
+		origin:   tok.Position(),
+		location: location,
 	}
 	s.Tokens = append(s.Tokens, token)
 	return token
