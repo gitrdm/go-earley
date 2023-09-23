@@ -327,7 +327,7 @@ func (parser *parser) NewTransition(predict *state.Normal, origin int, location 
 			DottedRule: trans.DottedRule,
 			Origin:     trans.Origin,
 			Symbol:     trans.Symbol,
-			Predict:    predict,
+			Predict:    predict.Node,
 			Root:       trans.Root,
 		}
 		trans.SetNext(clone)
@@ -343,7 +343,7 @@ func (parser *parser) NewTransition(predict *state.Normal, origin int, location 
 			DottedRule: next,
 			Origin:     predict.Origin,
 			Symbol:     sym,
-			Predict:    predict,
+			Predict:    predict.Node,
 			Root:       location,
 		}
 	}

@@ -21,7 +21,7 @@ type Transition struct {
 
 	next *Transition
 
-	Predict *Normal
+	Predict forest.Node
 
 	Root int
 }
@@ -42,5 +42,5 @@ func (t *Transition) SetNext(next *Transition) {
 }
 
 func (t *Transition) Node() forest.Node {
-	return t.Predict.Node
+	return t.Predict
 }
