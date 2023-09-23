@@ -2,7 +2,7 @@ package chart
 
 import (
 	"github.com/patrickhuber/go-earley/grammar"
-	"github.com/patrickhuber/go-earley/state"
+	"github.com/patrickhuber/go-earley/internal/state"
 )
 
 type Chart struct {

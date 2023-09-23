@@ -3,10 +3,10 @@ package parser
 import (
 	"fmt"
 
-	"github.com/patrickhuber/go-earley/chart"
 	"github.com/patrickhuber/go-earley/forest"
 	"github.com/patrickhuber/go-earley/grammar"
-	"github.com/patrickhuber/go-earley/state"
+	"github.com/patrickhuber/go-earley/internal/chart"
+	"github.com/patrickhuber/go-earley/internal/state"
 	"github.com/patrickhuber/go-earley/token"
 )
 
