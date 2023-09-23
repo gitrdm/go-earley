@@ -13,30 +13,77 @@ import (
 )
 
 func TestParser(t *testing.T) {
-	S := grammar.NewNonTerminal("S")
-	s := lexrule.NewString("s")
+	t.Run("s series", func(t *testing.T) {
 
-	// a series of S's
-	// S -> S S | S | 's'
-	g := grammar.New(
-		S,
-		// S -> S S
-		grammar.NewProduction(S, S, S),
-		// S -> S
-		grammar.NewProduction(S, S),
-		// S -> 's'
-		grammar.NewProduction(S, s),
-	)
+		S := grammar.NewNonTerminal("S")
+		s := lexrule.NewString("s")
 
-	p := parser.New(g)
+		// a series of S's
+		// S -> S S | S | 's'
+		g := grammar.New(
+			S,
+			// S -> S S
+			grammar.NewProduction(S, S, S),
+			// S -> S
+			grammar.NewProduction(S, S),
+			// S -> 's'
+			grammar.NewProduction(S, s),
+		)
 
-	for i := 0; i < 10; i++ {
-		tok := token.FromString("s", i, s.TokenType())
-		ok, err := p.Pulse(tok)
-		require.NoError(t, err, "loop %d", i)
-		require.True(t, ok, "loop %d", i)
-	}
-	require.True(t, p.Accepted())
+		p := parser.New(g)
+
+		for i := 0; i < 10; i++ {
+			tok := token.FromString("s", i, s.TokenType())
+			ok, err := p.Pulse(tok)
+			require.NoError(t, err, "loop %d", i)
+			require.True(t, ok, "loop %d", i)
+		}
+		require.True(t, p.Accepted())
+	})
+	
+	t.Run("underscore_binary", func(t *testing.T) {
+		// this is a grammar from pliant that caused some problems
+		file := grammar.NewNonTerminal("file")
+		ws := grammar.NewNonTerminal("ws")
+		ows := lexrule.NewString("_")
+		directives := grammar.NewNonTerminal("directives")
+		directivesRepeat := grammar.NewNonTerminal("directives_repeat")
+		directive := grammar.NewNonTerminal("directive")
+		zero := lexrule.NewString("0")
+		one := lexrule.NewString("1")
+
+		g := grammar.New(file,
+			// file = ws directives ws
+			grammar.NewProduction(file, ws, directives, ws),
+			// ws = [ ows ]
+			// ows = "_"
+			grammar.NewProduction(ws, ows),
+			grammar.NewProduction(ws),
+			// directives = directive { ows directive }
+			grammar.NewProduction(directives, directive, directivesRepeat),
+			grammar.NewProduction(directivesRepeat, ows, directive, directivesRepeat),
+			grammar.NewProduction(directivesRepeat),
+			// directive = "0" | "1"
+			grammar.NewProduction(directive, zero),
+			grammar.NewProduction(directive, one),
+		)
+		p := parser.New(g)
+		input := "_0_1_0_0_1_1_"
+		var tokens []*lexrule.String
+		for _, r := range input {
+			var tok *lexrule.String
+			switch r {
+			case '_':
+				tok = ows
+			case '0':
+				tok = zero
+			case '1':
+				tok = one
+			}
+			tokens = append(tokens, tok)
+		}
+		RunParse(t, p, tokens)
+	})
 }
 
 func TestAycockHorspool(t *testing.T) {
