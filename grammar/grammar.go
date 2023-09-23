@@ -1,7 +1,7 @@
 package grammar
 
 import (
-	"github.com/patrickhuber/go-earley/bitmatrix"
+	"github.com/patrickhuber/go-earley/internal/bitmatrix"
 	"github.com/patrickhuber/go-types"
 	"github.com/patrickhuber/go-types/handle"
 	"github.com/patrickhuber/go-types/result"

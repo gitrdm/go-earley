@@ -3,7 +3,7 @@ package bitarray_test
 import (
 	"testing"
 
-	"github.com/patrickhuber/go-earley/bitarray"
+	"github.com/patrickhuber/go-earley/internal/bitarray"
 	"github.com/stretchr/testify/require"
 )
 

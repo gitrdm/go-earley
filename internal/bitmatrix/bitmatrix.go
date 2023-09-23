@@ -1,7 +1,7 @@
 package bitmatrix
 
 import (
-	"github.com/patrickhuber/go-earley/bitarray"
+	"github.com/patrickhuber/go-earley/internal/bitarray"
 	"github.com/patrickhuber/go-types"
 	"github.com/patrickhuber/go-types/handle"
 	"github.com/patrickhuber/go-types/result"
