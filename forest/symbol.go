@@ -84,7 +84,10 @@ func (s Symbol) String() string {
 }
 
 func (s *Symbol) Accept(v Visitor) {
-	v.VisitSymbol(s)
+	if !v.VisitSymbol(s) {
+		// already visited
+		return
+	}
 	for _, alt := range s.internal.alternatives {
 		for _, child := range alt.Children() {
 			if acceptor, ok := child.(Acceptor); ok {

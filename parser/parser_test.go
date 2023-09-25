@@ -40,7 +40,7 @@ func TestParser(t *testing.T) {
 		}
 		require.True(t, p.Accepted())
 	})
-	
+
 	t.Run("underscore_binary", func(t *testing.T) {
 		// this is a grammar from pliant that caused some problems
 		file := grammar.NewNonTerminal("file")
@@ -171,6 +171,52 @@ func TestLeo(t *testing.T) {
 
 func TestForest(t *testing.T) {
 
+	t.Run("Scott2008_sec3_ex1", func(t *testing.T) {
+		S := grammar.NewNonTerminal("S")
+		T := grammar.NewNonTerminal("T")
+		B := grammar.NewNonTerminal("B")
+		a := lexrule.NewString("a")
+
+		productions := []*grammar.Production{
+			grammar.NewProduction(S, S, T),
+			grammar.NewProduction(S, a),
+			grammar.NewProduction(B),
+			grammar.NewProduction(T, a, B),
+			grammar.NewProduction(T, a),
+		}
+
+		g := grammar.New(S, productions...)
+		p := parser.New(g)
+
+		input := []*lexrule.String{a, a}
+		RunParse(t, p, input)
+
+		root, ok := p.GetForestRoot()
+		require.True(t, ok)
+
+		/*
+			(S,0,2) -> (S,0,1) (T,1,2)
+			(S,0,1) -> (a,0,1)
+			(T,1,2) -> (a,1,2)
+					|  (a,1,2) (B,2,2)
+			(B,2,2) ->
+		*/
+		PrintForest(t, root)
+		S_0_2 := Symbol(S, 0, 2)
+		S_0_1 := Symbol(S, 0, 1)
+		a_0_1 := Token(a, 0, 1)
+		T_1_2 := Symbol(T, 1, 2)
+		a_1_2 := Token(a, 1, 2)
+		B_2_2 := Symbol(B, 2, 2)
+
+		Edge(S_0_2, S_0_1, T_1_2)
+		Edge(S_0_1, a_0_1)
+		Edge(T_1_2, a_1_2)
+		Edge(T_1_2, a_1_2, B_2_2)
+
+		Equal(t, S_0_2, root)
+	})
+
 	t.Run("Scott2008_sec4_ex2", func(t *testing.T) {
 		S := grammar.NewNonTerminal("S")
 		b := lexrule.NewString("b")
@@ -188,59 +234,35 @@ func TestForest(t *testing.T) {
 		RunParse(t, p, input)
 
 		/*
-			(S,0,3)	->
-				(S->S*S,0,2) (S,2,3)
-			|	(S->S*S,0,1) (S,1,3)
-
-			(S->S*S,0,2) ->
-				(S,0,2)
-
-			(S->S*S,0,1) ->
-				(S,0,1)
-
-			(S,0,1) ->
-				(b,0,1)
-
-			(S,0,2) ->
-				(S->S*S,0,1) (S,1,2)
-
-			(S,1,2) ->
-				(b,1,2)
-
-			(S,1,3) ->
-				(S->S*S,1,2) (S,2,3)
-
-			(S->S*S,1,2) ->
-				(S, 1, 2)
-
-			(S,2,3) ->
-				(b,2,3)
+			(S, 0, 3) -> (S, 0, 2) (S, 2, 3)
+					   | (S, 0, 1) (S, 1, 3)
+			(S, 0, 2) -> (S, 0, 1) (S, 1, 2)
+			(S, 0, 1) -> (b, 0, 1)
+			(S, 1, 2) -> (b, 1, 2)
+			(S, 2, 3) -> (b, 2, 3)
+			(S, 1, 3) -> (S, 1, 2) (S, 2, 3)
 		*/
 		root, ok := p.GetForestRoot()
 		require.True(t, ok)
 
+		PrintForest(t, root)
+
 		S_0_3 := Symbol(S, 0, 3)
 		S_0_1 := Symbol(S, 0, 1)
-		S_SS_0_1 := Intermediate(Rule(productions[0], 1), 0, 1)
 		S_1_2 := Symbol(S, 1, 2)
-		S_SS_1_2 := Intermediate(Rule(productions[0], 1), 1, 2)
 		S_0_2 := Symbol(S, 0, 2)
-		S_SS_0_2 := Intermediate(Rule(productions[0], 1), 0, 2)
 		S_2_3 := Symbol(S, 2, 3)
 		S_1_3 := Symbol(S, 1, 3)
 		b_0_1 := Token(b, 0, 1)
 		b_1_2 := Token(b, 1, 2)
 		b_2_3 := Token(b, 2, 3)
 
-		Edge(S_0_3, S_SS_0_2, S_2_3)
-		Edge(S_0_3, S_SS_0_1, S_1_3)
-		Edge(S_SS_0_2, S_0_2)
-		Edge(S_SS_0_1, S_0_1)
+		Edge(S_0_3, S_0_2, S_2_3)
+		Edge(S_0_3, S_0_1, S_1_3)
 		Edge(S_0_1, b_0_1)
-		Edge(S_0_2, S_SS_0_1, S_1_2)
+		Edge(S_0_2, S_0_1, S_1_2)
 		Edge(S_1_2, b_1_2)
-		Edge(S_1_3, S_SS_1_2, S_2_3)
-		Edge(S_SS_1_2, S_1_2)
+		Edge(S_1_3, S_1_2, S_2_3)
 		Edge(S_2_3, b_2_3)
 
 		Equal(t, S_0_3, root)
@@ -273,58 +295,34 @@ func TestForest(t *testing.T) {
 		root, ok := p.GetForestRoot()
 		require.True(t, ok)
 		require.NotNil(t, root)
-
+		PrintForest(t, root)
 		/*
-			(S,0,4) ->
-				(S->a*T,0,1) (T,1,4)
-			|	(S->A*T,0,1) (T,1,4)
-
-			(S->a*T,0,1) ->
-				(a,0,1)
-
-			(T,1,4) ->
-				(T->bb*b,1,3) (b,3,4)
-
-			(T->bb*b,1,3) ->
-				(T->b*bb,1,2) (b,2,3)
-
-			(T->b*bb,1,2) ->
-				(b,1,2)
-
-			(S->A*T,0,1) ->
-				(A,0,1)
-
-			(A,0,1) ->
-				(a,0,1)
-			|	(A->B*A,0,0) (A,0,1)
-
-			(A->B*A,0,0) ->
-				(B,0,0)
-
+			(S,0,4)
+				->	(a,0,1) (T,1,4)
+				|	(A,0,1) (T,1,4)
+			(T,1,4)
+				->	(T->bb*b,1,3) (b,3,4)
+			(T->bb*b,1,3)
+				->	(b,1,2) (b,2,3)
+			(A,0,1)
+				->	(B,0,0) (A,0,1)
+				|	(a,0,1)
 			(B,0,0)->
 		*/
 		S_0_4 := Symbol(S, 0, 4)
-		S_aT_0_1 := Intermediate(Rule(productions[1], 1), 0, 1)
 		T_1_4 := Symbol(T, 1, 4)
 		T_bbb_1_3 := Intermediate(Rule(productions[5], 2), 1, 3)
-		T_bbb_1_2 := Intermediate(Rule(productions[5], 1), 1, 2)
-		S_AT_0_1 := Intermediate(Rule(productions[0], 1), 0, 1)
 		A_0_1 := Symbol(A, 0, 1)
 		B_0_0 := Symbol(B, 0, 0)
-		A_BA_0_0 := Intermediate(Rule(productions[3], 1), 0, 0)
 		a_0_1 := Token(a, 0, 1)
 		b_1_2 := Token(b, 1, 2)
 		b_2_3 := Token(b, 2, 3)
-		Edge(S_0_4, S_aT_0_1, T_1_4)
-		Edge(S_0_4, S_AT_0_1, T_1_4)
-		Edge(S_aT_0_1, a_0_1)
+		Edge(S_0_4, a_0_1, T_1_4)
+		Edge(S_0_4, A_0_1, T_1_4)
 		Edge(T_1_4, T_bbb_1_3, b_2_3)
-		Edge(T_bbb_1_3, T_bbb_1_2, b_2_3)
-		Edge(T_bbb_1_2, b_1_2)
-		Edge(S_AT_0_1, A_0_1)
+		Edge(T_bbb_1_3, b_1_2, b_2_3)
+		Edge(A_0_1, B_0_0, A_0_1)
 		Edge(A_0_1, a_0_1)
-		Edge(A_0_1, A_BA_0_0, A_0_1)
-		Edge(A_BA_0_0, B_0_0)
 
 		Equal(t, S_0_4, root)
 	})
@@ -354,61 +352,35 @@ func TestForest(t *testing.T) {
 		RunParse(t, p, input)
 		root, ok := p.GetForestRoot()
 		require.True(t, ok)
-		printer := forest.NewPrinter(os.Stdout)
-		acceptor, ok := root.(forest.Acceptor)
-		require.True(t, ok)
-		acceptor.Accept(printer)
 
+		PrintForest(t, root)
 		/*
-			(R, 0, 4) ->
-				(E, 0, 4)
-			(E, 0, 4) ->
-				(T, 0, 4)
-			(T, 0, 4) ->
-				(T -> F•T, 0, 1) (T, 1, 4)
-			(T -> F•T, 0, 1) ->
-				(F, 0, 1)
-			(F, 0, 1) ->
-				(A, 0, 1)
-			(A, 0, 1) ->
-				(a, 0, 1)
-			(T, 1, 4) ->
-				(T -> F•T, 1, 2) (T, 2, 4)
-			(T -> F•T, 1, 2) ->
-				(F, 1, 2)
-			(F, 1, 2) ->
-				(A, 1, 2)
-			(A, 1, 2) ->
-				(a, 1, 2)
-			(T, 2, 4) ->
-				(T -> F•T, 2, 3) (T, 3, 4)
-			(T -> F•T, 2, 3) ->
-				(F, 2, 3)
-			(F, 2, 3) ->
-				(A, 2, 3)
-			(A, 2, 3) ->
-				(a, 2, 3)
-			(T, 3, 4) ->
-				(F, 3, 4)
-			(F, 3, 4) ->
-				(A, 3, 4)
-			(A, 3, 4) ->
-				(a, 3, 4)
+			(R, 0, 4) -> (E, 0, 4)
+			(E, 0, 4) -> (T, 0, 4)
+			(T, 0, 4) -> (F, 0, 1) (T, 1, 4)
+			(F, 0, 1) -> (A, 0, 1)
+			(A, 0, 1) -> (a, 0, 1)
+			(T, 1, 4) -> (F, 1, 2) (T, 2, 4)
+			(F, 1, 2) -> (A, 1, 2)
+			(A, 1, 2) -> (a, 1, 2)
+			(T, 2, 4) -> (F, 2, 3) (T, 3, 4)
+			(F, 2, 3) -> (A, 2, 3)
+			(A, 2, 3) -> (a, 2, 3)
+			(T, 3, 4) -> (F, 3, 4)
+			(F, 3, 4) -> (A, 3, 4)
+			(A, 3, 4) -> (a, 3, 4)
 		*/
 		R_0_4 := Symbol(R, 0, 4)
 		E_0_4 := Symbol(E, 0, 4)
 		T_0_4 := Symbol(T, 0, 4)
-		T_FT_0_1 := Intermediate(Rule(productions[4], 1), 0, 1)
 		T_1_4 := Symbol(T, 1, 4)
 		F_0_1 := Symbol(F, 0, 1)
 		A_0_1 := Symbol(A, 0, 1)
 		a_0_1 := Token(a, 0, 1)
-		T_FT_1_2 := Intermediate(Rule(productions[4], 1), 1, 2)
 		T_2_4 := Symbol(T, 2, 4)
 		F_1_2 := Symbol(F, 1, 2)
 		A_1_2 := Symbol(A, 1, 2)
 		a_1_2 := Token(a, 1, 2)
-		T_FT_2_3 := Intermediate(Rule(productions[4], 1), 2, 3)
 		T_3_4 := Symbol(T, 3, 4)
 		F_2_3 := Symbol(F, 2, 3)
 		A_2_3 := Symbol(A, 2, 3)
@@ -418,16 +390,13 @@ func TestForest(t *testing.T) {
 		a_3_4 := Token(a, 3, 4)
 		Edge(R_0_4, E_0_4)
 		Edge(E_0_4, T_0_4)
-		Edge(T_0_4, T_FT_0_1, T_1_4)
-		Edge(T_FT_0_1, F_0_1)
+		Edge(T_0_4, F_0_1, T_1_4)
 		Edge(F_0_1, A_0_1)
 		Edge(A_0_1, a_0_1)
-		Edge(T_1_4, T_FT_1_2, T_2_4)
-		Edge(T_FT_1_2, F_1_2)
+		Edge(T_1_4, F_1_2, T_2_4)
 		Edge(F_1_2, A_1_2)
 		Edge(A_1_2, a_1_2)
-		Edge(T_2_4, T_FT_2_3, T_3_4)
-		Edge(T_FT_2_3, F_2_3)
+		Edge(T_2_4, F_2_3, T_3_4)
 		Edge(F_2_3, A_2_3)
 		Edge(A_2_3, a_2_3)
 		Edge(T_3_4, F_3_4)
@@ -460,10 +429,7 @@ func TestForest(t *testing.T) {
 		root, ok := p.GetForestRoot()
 		require.True(t, ok)
 
-		printer := forest.NewPrinter(os.Stdout)
-		acceptor, ok := root.(forest.Acceptor)
-		require.True(t, ok)
-		acceptor.Accept(printer)
+		PrintForest(t, root)
 	})
 }
 
@@ -491,6 +457,13 @@ func Token(rule grammar.LexerRule, origin, location int) *forest.Token {
 
 func Alternative(nodes ...forest.Node) forest.Group {
 	return forest.NewGroup(nodes...)
+}
+
+func PrintForest(t *testing.T, root forest.Node) {
+	printer := forest.NewPrinter(os.Stdout)
+	acceptor, ok := root.(forest.Acceptor)
+	require.True(t, ok)
+	acceptor.Accept(printer)
 }
 
 func Equal(t *testing.T, expectedNode forest.Node, actualNode forest.Node) {
@@ -532,18 +505,18 @@ func Equal(t *testing.T, expectedNode forest.Node, actualNode forest.Node) {
 			tok, ok := actualNode.(*forest.Token)
 			require.True(t, ok, "%s != %s", n, actualNode)
 			TokenEqual(t, n, tok)
-			return
+			continue
 		}
 
 		InternalEqual(t, expectedInternal, actualInternal)
 		for g := 0; g < len(expectedInternal.Alternatives()); g++ {
-			alt1 := expectedInternal.Alternatives()[g]
-			alt2 := actualInternal.Alternatives()[g]
-			for c := 0; c < len(alt1.Children()); c++ {
-				c1 := alt1.Children()[c]
-				expectedWork = append(expectedWork, c1)
-				c2 := alt2.Children()[c]
-				actualWork = append(actualWork, c2)
+			expectedAlt := expectedInternal.Alternatives()[g]
+			actualAlt := actualInternal.Alternatives()[g]
+			for c := 0; c < len(expectedAlt.Children()); c++ {
+				expectedChild := expectedAlt.Children()[c]
+				expectedWork = append(expectedWork, expectedChild)
+				actualChild := actualAlt.Children()[c]
+				actualWork = append(actualWork, actualChild)
 			}
 		}
 	}

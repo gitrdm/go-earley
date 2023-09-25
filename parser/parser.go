@@ -301,7 +301,7 @@ func (parser *parser) memoize(location int) {
 		}
 
 		// create the transition
-		trans, ok := parser.NewTransition(normal, normal.Origin, location)
+		trans, ok := parser.newTransition(normal, normal.Origin, location)
 		if !ok {
 			continue
 		}
@@ -315,7 +315,7 @@ func (parser *parser) memoize(location int) {
 	}
 }
 
-func (parser *parser) NewTransition(predict *state.Normal, origin int, location int) (*state.Transition, bool) {
+func (parser *parser) newTransition(predict *state.Normal, origin int, location int) (*state.Transition, bool) {
 	sym, ok := predict.DottedRule.PostDotSymbol().Deconstruct()
 	if !ok {
 		return nil, ok
@@ -422,11 +422,9 @@ func (p *parser) predictAycockHorspool(evidence *state.Normal, location int) {
 	state := p.newState(next.Production, next.Position, evidence.Origin)
 
 	// create empty node
-	postDot := evidence.DottedRule.PostDotSymbol()
-	if postDot.IsSome() {
-		node := p.nodes.AddOrGetExistingSymbolNode(postDot.Unwrap(), evidence.Origin, location)
-		state.Node = node
-	}
+	node := p.createParseNode(next, evidence.Origin, nil, nil, location)
+	// node := p.nodes.AddOrGetExistingSymbolNode(next.Production.LeftHandSide, evidence.Origin, location)
+	state.Node = node
 
 	p.chart.Enqueue(location, state)
 	fmt.Printf("%s : Predict AH", state)
@@ -504,12 +502,13 @@ func (p *parser) createParseNode(
 		else {
 			if no node labeled (s,j,i) in V, create one add to V
 			if w == null and y has no family of children (v), add one
-			if W != null and y has no family of children (w,v), add one
+			if w != null and y has no family of children (w,v), add one
 		}
 		return y
 	*/
 	var internal forest.Internal
 	var node forest.Node
+
 	if rule.Complete() {
 		symbol := p.nodes.AddOrGetExistingSymbolNode(
 			rule.Production.LeftHandSide,
@@ -528,9 +527,17 @@ func (p *parser) createParseNode(
 		internal = intermediate
 	}
 
-	if w == nil {
+	// this will merge parent and child nodes
+	// it is placed after to support caching of the original node
+	if !rule.Complete() &&
+		rule.Position == 1 &&
+		v != nil {
+		return v
+	}
+
+	if w == nil && v != nil {
 		internal.AddUniqueFamily(v, nil)
-	} else {
+	} else if w != nil && v != nil {
 		internal.AddUniqueFamily(w, v)
 	}
 	return node

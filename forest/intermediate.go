@@ -40,7 +40,10 @@ func (i Intermediate) String() string {
 }
 
 func (i *Intermediate) Accept(v Visitor) {
-	v.VisitIntermediate(i)
+	if !v.VisitIntermediate(i) {
+		// already visited
+		return
+	}
 	for _, alt := range i.internal.alternatives {
 		for _, child := range alt.Children() {
 			if acceptor, ok := child.(Acceptor); ok {

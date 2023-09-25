@@ -6,9 +6,9 @@ import (
 )
 
 type Visitor interface {
-	VisitToken(t *Token)
-	VisitIntermediate(i *Intermediate)
-	VisitSymbol(s *Symbol)
+	VisitToken(t *Token) bool
+	VisitIntermediate(i *Intermediate) bool
+	VisitSymbol(s *Symbol) bool
 }
 
 type Acceptor interface {
@@ -27,34 +27,38 @@ func NewPrinter(writer io.Writer) *Printer {
 	}
 }
 
-func (p *Printer) VisitToken(t *Token) {
+func (p *Printer) VisitToken(t *Token) bool {
 	if _, ok := p.cache[t]; ok {
-		return
+		return false
 	}
-	fmt.Fprintf(p.writer, "(%s, %d, %d)", t.Token.Type(), t.Origin(), t.Location())
 	p.cache[t] = struct{}{}
+	return true
 }
 
-func (p *Printer) VisitIntermediate(i *Intermediate) {
+func (p *Printer) VisitIntermediate(i *Intermediate) bool {
 	if _, ok := p.cache[i]; ok {
-		return
+		return false
 	}
 	p.PrintIntermediate(i)
 	p.PrintInternal(i)
 	p.cache[i] = struct{}{}
+	fmt.Fprintln(p.writer)
+	return true
 }
 
 func (p *Printer) PrintIntermediate(i *Intermediate) {
 	fmt.Fprintf(p.writer, "(%s, %d, %d)", i.Rule.String(), i.Origin(), i.Location())
 }
 
-func (p *Printer) VisitSymbol(s *Symbol) {
+func (p *Printer) VisitSymbol(s *Symbol) bool {
 	if _, ok := p.cache[s]; ok {
-		return
+		return false
 	}
 	p.PrintSymbol(s)
 	p.PrintInternal(s)
 	p.cache[s] = struct{}{}
+	fmt.Fprintln(p.writer)
+	return true
 }
 
 func (p *Printer) PrintSymbol(s *Symbol) {
@@ -63,8 +67,9 @@ func (p *Printer) PrintSymbol(s *Symbol) {
 
 func (p *Printer) PrintInternal(i Internal) {
 	fmt.Fprintf(p.writer, " -> ")
-	for i, alt := range i.Alternatives() {
-		if i > 0 {
+	for j, alt := range i.Alternatives() {
+		if j > 0 {
+			fmt.Fprintln(p.writer)
 			fmt.Fprint(p.writer, "\t| ")
 		}
 		for _, child := range alt.Children() {
@@ -74,10 +79,13 @@ func (p *Printer) PrintInternal(i Internal) {
 			case *Intermediate:
 				p.PrintIntermediate(c)
 			case *Token:
-				p.VisitToken(c)
+				p.PrintToken(c)
 			}
 			fmt.Fprintf(p.writer, " ")
 		}
-		fmt.Fprintln(p.writer)
 	}
+}
+
+func (p *Printer) PrintToken(t *Token) {
+	fmt.Fprintf(p.writer, "(%s, %d, %d)", t.Token.Type(), t.Origin(), t.Location())
 }
