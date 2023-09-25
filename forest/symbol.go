@@ -48,7 +48,7 @@ func (s *Symbol) expand() {
 		rightSubTree := node
 		next := path.Next()
 
-		if next.Node() == nil || next.Node().Location() == rightSubTree.Location() {
+		if next == nil || next.Node() == nil || next.Node().Location() == rightSubTree.Location() {
 			s.internal.alternatives = append(s.internal.alternatives, group{
 				children: []Node{
 					leftTree,
@@ -58,7 +58,7 @@ func (s *Symbol) expand() {
 			return
 		}
 		rightTree := NewSymbol(s.Symbol, next.Node().Origin(), s.location)
-		rightTree.AddPath(path.Next(), node)
+		rightTree.AddPath(next, node)
 		s.internal.alternatives = append(s.internal.alternatives, &group{
 			children: []Node{
 				leftTree,
