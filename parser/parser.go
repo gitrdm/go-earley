@@ -393,7 +393,7 @@ func (par *parser) predict(evidence *state.Normal, location int) {
 
 	isNullable := par.grammar.IsTransativeNullable(nonTerminal)
 	if isNullable {
-		par.predictAycockHorspool(evidence, location)
+		par.predictAycockHorspool(evidence, nonTerminal, location)
 	}
 }
 
@@ -411,7 +411,7 @@ func (p *parser) predictProduction(location int, production *grammar.Production)
 	fmt.Println()
 }
 
-func (p *parser) predictAycockHorspool(evidence *state.Normal, location int) {
+func (p *parser) predictAycockHorspool(evidence *state.Normal, nullableSymbol grammar.Symbol, location int) {
 	next, ok := p.grammar.Rules.Next(evidence.DottedRule)
 	if !ok {
 		return
@@ -421,9 +421,10 @@ func (p *parser) predictAycockHorspool(evidence *state.Normal, location int) {
 	}
 	state := p.newState(next.Production, next.Position, evidence.Origin)
 
-	// create empty node
-	node := p.createParseNode(next, evidence.Origin, nil, nil, location)
-	// node := p.nodes.AddOrGetExistingSymbolNode(next.Production.LeftHandSide, evidence.Origin, location)
+	emptyNode := p.nodes.AddOrGetExistingSymbolNode(nullableSymbol, location, location)
+
+	// create the node for the completed item
+	node := p.createParseNode(next, evidence.Origin, evidence.Node, emptyNode, location)
 	state.Node = node
 
 	p.chart.Enqueue(location, state)

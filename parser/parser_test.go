@@ -317,13 +317,13 @@ func TestForest(t *testing.T) {
 		a_0_1 := Token(a, 0, 1)
 		b_1_2 := Token(b, 1, 2)
 		b_2_3 := Token(b, 2, 3)
+		b_3_4 := Token(b, 3, 4)
 		Edge(S_0_4, a_0_1, T_1_4)
 		Edge(S_0_4, A_0_1, T_1_4)
-		Edge(T_1_4, T_bbb_1_3, b_2_3)
+		Edge(T_1_4, T_bbb_1_3, b_3_4)
 		Edge(T_bbb_1_3, b_1_2, b_2_3)
-		Edge(A_0_1, B_0_0, A_0_1)
 		Edge(A_0_1, a_0_1)
-
+		Edge(A_0_1, B_0_0, A_0_1)
 		Equal(t, S_0_4, root)
 	})
 
@@ -545,7 +545,7 @@ func InternalEqual(t *testing.T, expected, actual forest.Internal) {
 	for i := 0; i < len(expected.Alternatives()); i++ {
 		expectedAlternative := expected.Alternatives()[i]
 		actualAlternative := actual.Alternatives()[i]
-		require.Equal(t, len(expectedAlternative.Children()), len(actualAlternative.Children()))
+		require.Equal(t, len(expectedAlternative.Children()), len(actualAlternative.Children()), "len(%s.Alternatives()[%d].Children()) != len(%s.Alternatives()[%d].Children())", expected, i, actual, i)
 	}
 }
 
