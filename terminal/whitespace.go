@@ -20,5 +20,5 @@ func NewWhitespace() grammar.Terminal {
 }
 
 func (*whitespace) String() string {
-	return "\\s+"
+	return "\\s"
 }

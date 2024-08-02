@@ -7,7 +7,16 @@ type State struct {
 	Transitions []Transition
 }
 
+func (s *State) IsMatch(ch rune) bool {
+	for _, t := range s.Transitions {
+		if t.Terminal.IsMatch(ch) {
+			return true
+		}
+	}
+	return false
+}
+
 type Transition struct {
-	Traget   State
+	Target   *State
 	Terminal grammar.Terminal
 }

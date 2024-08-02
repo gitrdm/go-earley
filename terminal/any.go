@@ -19,5 +19,5 @@ func NewAny() grammar.Terminal {
 }
 
 func (*_any) String() string {
-	return ".*"
+	return "."
 }
