@@ -3,7 +3,7 @@ package dfa_test
 import (
 	"testing"
 
-	"github.com/patrickhuber/go-earley/dfa"
+	"github.com/patrickhuber/go-earley/automata/dfa"
 	"github.com/patrickhuber/go-earley/terminal"
 )
 

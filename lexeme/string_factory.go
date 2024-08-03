@@ -19,7 +19,7 @@ func (f *stringFactory) Create(lexerRule grammar.LexerRule, str string, offset i
 		return nil, fmt.Errorf("string factory expected lexer rule of type %s but found %s", lexrule.StringType, lexerRule.Type())
 	}
 	if f.queue.Length() == 0 {
-		return NewString(rule, str, offset), nil
+		return NewString(rule, offset), nil
 	}
 	reused := f.queue.Dequeue()
 	reused.Reset(offset)

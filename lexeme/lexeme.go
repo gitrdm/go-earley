@@ -1,26 +1,14 @@
 package lexeme
 
-import (
-	"github.com/patrickhuber/go-earley/token"
-)
-
 // Lexeme is a mutable token
 type Lexeme interface {
-	token.Token
-	Reset(offset int)
-	Scan() bool
+	Scan(ch rune) bool
 	Accepted() bool
 }
 
 type lexeme struct {
-	capture   string
 	span      *Span
 	tokenType string
-}
-
-// Capture implements Token.
-func (t *lexeme) Capture() string {
-	return t.capture[t.span.Offset:t.span.Length]
 }
 
 // Position implements Token.
