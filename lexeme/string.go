@@ -1,6 +1,8 @@
 package lexeme
 
 import (
+	"unicode/utf8"
+
 	"github.com/patrickhuber/go-earley/lexrule"
 )
 
@@ -26,17 +28,15 @@ func (s *String) Reset(offset int) {
 }
 
 // Scan implements Lexeme.
-func (s *String) Scan() bool {
-	if s.index >= len(s.capture) {
-		return false
-	}
+func (s *String) Scan(ch rune) bool {
 	if s.index >= len(s.rule.Value) {
 		return false
 	}
-	if s.capture[s.index] != s.rule.Value[s.index] {
+	r, n := utf8.DecodeRuneInString(s.rule.Value[s.index:])
+	if ch != r {
 		return false
 	}
-	s.index++
+	s.index += n
 	return true
 }
 
@@ -45,11 +45,9 @@ func (*String) Type() string {
 	panic("unimplemented")
 }
 
-func NewString(lexerRule *lexrule.String, str string, offset int) *String {
+func NewString(lexerRule *lexrule.String, offset int) *String {
 	return &String{
-		rule: lexerRule,
-		lexeme: lexeme{
-			capture: str,
-		},
+		rule:   lexerRule,
+		lexeme: lexeme{},
 	}
 }

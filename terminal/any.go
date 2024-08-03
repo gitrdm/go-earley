@@ -2,22 +2,19 @@ package terminal
 
 import "github.com/patrickhuber/go-earley/grammar"
 
-type Any interface {
-}
-
-type _any struct {
+type Any struct {
 	grammar.SymbolImpl
 }
 
 // IsMatch implements grammar.Terminal.
-func (*_any) IsMatch(ch rune) bool {
+func (Any) IsMatch(ch rune) bool {
 	return true
 }
 
-func NewAny() grammar.Terminal {
-	return &_any{}
+func NewAny() *Any {
+	return &Any{}
 }
 
-func (*_any) String() string {
+func (Any) String() string {
 	return "."
 }

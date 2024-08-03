@@ -3,7 +3,7 @@ package dfa_test
 import (
 	"testing"
 
-	"github.com/patrickhuber/go-earley/dfa"
+	"github.com/patrickhuber/go-earley/automata/dfa"
 	"github.com/patrickhuber/go-earley/terminal"
 )
 
@@ -20,7 +20,7 @@ func TestLexRule(t *testing.T) {
 			Target:   one,
 		})
 		lexRule := dfa.Dfa{
-			State: zero,
+			Start: zero,
 		}
 		if !lexRule.CanApply('a') {
 			t.Fatal("should apply on 'a'")
