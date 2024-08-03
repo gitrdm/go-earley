@@ -6,19 +6,19 @@ import (
 	"github.com/patrickhuber/go-earley/grammar"
 )
 
-type whitespace struct {
+type Whitespace struct {
 	grammar.SymbolImpl
 }
 
 // IsMatch implements grammar.Terminal.
-func (*whitespace) IsMatch(ch rune) bool {
+func (*Whitespace) IsMatch(ch rune) bool {
 	return unicode.IsSpace(ch)
 }
 
-func NewWhitespace() grammar.Terminal {
-	return &whitespace{}
+func NewWhitespace() *Whitespace {
+	return &Whitespace{}
 }
 
-func (*whitespace) String() string {
+func (*Whitespace) String() string {
 	return "\\s+"
 }

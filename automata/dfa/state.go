@@ -8,6 +8,6 @@ type State struct {
 }
 
 type Transition struct {
-	Traget   State
+	Target   *State
 	Terminal grammar.Terminal
 }

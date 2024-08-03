@@ -78,7 +78,7 @@ func (s *scanner) Read() (bool, error) {
 
 	s.update(ch)
 
-	if s.matchesExistingLexemes() {
+	if s.matchesExistingLexemes(ch) {
 		if s.EndOfStream() {
 			if !s.tryParseExistingLexemes() {
 				return false, nil
@@ -134,13 +134,13 @@ func (s *scanner) update(ch rune) {
 	}
 }
 
-func (s *scanner) matchesExistingLexemes() bool {
+func (s *scanner) matchesExistingLexemes(ch rune) bool {
 	if len(s.lexemes) == 0 {
 		return false
 	}
 	var matched []lexeme.Lexeme
 	for _, lexeme := range s.lexemes {
-		if lexeme.Scan() {
+		if lexeme.Scan(ch) {
 			matched = append(matched, lexeme)
 		}
 	}
@@ -191,7 +191,7 @@ func (s *scanner) matchLexerRules(ch rune, lexerRules []grammar.LexerRule) (bool
 		if err != nil {
 			return false, err
 		}
-		if !tok.Scan() {
+		if !tok.Scan(ch) {
 			err = factory.Free(tok)
 			if err != nil {
 				return false, err
