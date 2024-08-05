@@ -205,6 +205,8 @@ func (s *scanner) matchLexerRules(ch rune, lexerRules []grammar.LexerRule) (bool
 			}
 			continue
 		}
+		s.lexemes = append(s.lexemes, tok)
+		anyMatches = true
 	}
 	return anyMatches, nil
 }
