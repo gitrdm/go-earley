@@ -20,10 +20,16 @@ func New(start NonTerminal, productions ...*Production) *Grammar {
 		Start:       start,
 		Productions: productions,
 	}
+	// we need to wrap any terminals as lexer rules
+	// we either do this or remove the symbol interface from terminals
+	replaceTerminals(g)
+
 	// compute dotted rules registry
 	g.Rules = compute(g)
+
 	// compute transitive null
 	g.transitiveNull = identifyNullableSymbols(g)
+
 	// compute right recursive
 	rightRecursive, err := g.identifyRightRecursiveSymbols().Deconstruct()
 	if err == nil {
@@ -32,6 +38,18 @@ func New(start NonTerminal, productions ...*Production) *Grammar {
 	return g
 }
 
+func replaceTerminals(g *Grammar) {
+	for _, p := range g.Productions {
+		for i, s := range p.RightHandSide {
+			t, ok := s.(Terminal)
+			if !ok {
+				continue
+			}
+			lex := NewTerminalLexerRule(t)
+			p.RightHandSide[i] = lex
+		}
+	}
+}
 func compute(g *Grammar) RuleRegistry {
 	r := NewRegistry()
 	for p := range g.Productions {
