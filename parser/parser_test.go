@@ -6,7 +6,6 @@ import (
 
 	"github.com/patrickhuber/go-earley/forest"
 	"github.com/patrickhuber/go-earley/grammar"
-	"github.com/patrickhuber/go-earley/lexrule"
 	"github.com/patrickhuber/go-earley/parser"
 	"github.com/patrickhuber/go-earley/token"
 	"github.com/stretchr/testify/require"
@@ -16,7 +15,7 @@ func TestParser(t *testing.T) {
 	t.Run("s series", func(t *testing.T) {
 
 		S := grammar.NewNonTerminal("S")
-		s := lexrule.NewString("s")
+		s := grammar.NewStringLexerRule("s")
 
 		// a series of S's
 		// S -> S S | S | 's'
@@ -33,7 +32,7 @@ func TestParser(t *testing.T) {
 		p := parser.New(g)
 
 		for i := 0; i < 10; i++ {
-			tok := token.FromString("s", i, s.TokenType())
+			tok := token.NewString(s, i)
 			ok, err := p.Pulse(tok)
 			require.NoError(t, err, "loop %d", i)
 			require.True(t, ok, "loop %d", i)
@@ -45,12 +44,12 @@ func TestParser(t *testing.T) {
 		// this is a grammar from pliant that caused some problems
 		file := grammar.NewNonTerminal("file")
 		ws := grammar.NewNonTerminal("ws")
-		ows := lexrule.NewString("_")
+		ows := grammar.NewStringLexerRule("_")
 		directives := grammar.NewNonTerminal("directives")
 		directivesRepeat := grammar.NewNonTerminal("directives_repeat")
 		directive := grammar.NewNonTerminal("directive")
-		zero := lexrule.NewString("0")
-		one := lexrule.NewString("1")
+		zero := grammar.NewStringLexerRule("0")
+		one := grammar.NewStringLexerRule("1")
 
 		g := grammar.New(file,
 			// file = ws directives ws
@@ -69,9 +68,9 @@ func TestParser(t *testing.T) {
 		)
 		p := parser.New(g)
 		input := "_0_1_0_0_1_1_"
-		var tokens []*lexrule.String
+		var tokens []*grammar.StringLexerRule
 		for _, r := range input {
-			var tok *lexrule.String
+			var tok *grammar.StringLexerRule
 			switch r {
 			case '_':
 				tok = ows
@@ -82,7 +81,7 @@ func TestParser(t *testing.T) {
 			}
 			tokens = append(tokens, tok)
 		}
-		RunParse(t, p, tokens)
+		RunParse(t, p, tokens...)
 	})
 }
 
@@ -97,7 +96,7 @@ func TestAycockHorspool(t *testing.T) {
 	S := grammar.NewNonTerminal("S")
 	A := grammar.NewNonTerminal("A")
 	E := grammar.NewNonTerminal("E")
-	a := lexrule.NewString("a")
+	a := grammar.NewStringLexerRule("a")
 
 	g := grammar.New(SPrime,
 		grammar.NewProduction(SPrime, S),
@@ -108,7 +107,7 @@ func TestAycockHorspool(t *testing.T) {
 	)
 
 	p := parser.New(g)
-	tok := token.FromString("a", 0, a.TokenType())
+	tok := TokenFromString("a", 0, a.TokenType())
 	ok, err := p.Pulse(tok)
 
 	require.NoError(t, err)
@@ -119,7 +118,7 @@ func TestAycockHorspool(t *testing.T) {
 func TestLeo(t *testing.T) {
 	t.Run("leo 1", func(t *testing.T) {
 		A := grammar.NewNonTerminal("A")
-		a := lexrule.NewString("a")
+		a := grammar.NewStringLexerRule("a")
 
 		// A -> A 'a'
 		// A ->
@@ -130,7 +129,7 @@ func TestLeo(t *testing.T) {
 
 		p := parser.New(g)
 		for i := 0; i < 10; i++ {
-			tok := token.FromString("a", i, a.TokenType())
+			tok := TokenFromString("a", i, a.TokenType())
 			ok, err := p.Pulse(tok)
 			require.NoError(t, err, "loop %d", i)
 			require.True(t, ok, "loop %d", i)
@@ -145,8 +144,8 @@ func TestLeo(t *testing.T) {
 		// C ->
 		S := grammar.NewNonTerminal("S")
 		C := grammar.NewNonTerminal("C")
-		a := lexrule.NewString("a")
-		b := lexrule.NewString("b")
+		a := grammar.NewStringLexerRule("a")
+		b := grammar.NewStringLexerRule("b")
 
 		g := grammar.New(S,
 			grammar.NewProduction(S, a, S),
@@ -160,7 +159,7 @@ func TestLeo(t *testing.T) {
 			if i > 5 {
 				lr = b
 			}
-			tok := token.FromString(lr.Value, i, lr.TokenType())
+			tok := TokenFromString(lr.Value, i, lr.TokenType())
 			ok, err := p.Pulse(tok)
 			require.NoError(t, err)
 			require.True(t, ok)
@@ -175,7 +174,7 @@ func TestForest(t *testing.T) {
 		S := grammar.NewNonTerminal("S")
 		T := grammar.NewNonTerminal("T")
 		B := grammar.NewNonTerminal("B")
-		a := lexrule.NewString("a")
+		a := grammar.NewStringLexerRule("a")
 
 		productions := []*grammar.Production{
 			grammar.NewProduction(S, S, T),
@@ -188,8 +187,7 @@ func TestForest(t *testing.T) {
 		g := grammar.New(S, productions...)
 		p := parser.New(g)
 
-		input := []*lexrule.String{a, a}
-		RunParse(t, p, input)
+		RunParse(t, p, a, a)
 
 		root, ok := p.GetForestRoot()
 		require.True(t, ok)
@@ -219,7 +217,7 @@ func TestForest(t *testing.T) {
 
 	t.Run("Scott2008_sec4_ex2", func(t *testing.T) {
 		S := grammar.NewNonTerminal("S")
-		b := lexrule.NewString("b")
+		b := grammar.NewStringLexerRule("b")
 
 		productions := []*grammar.Production{
 			grammar.NewProduction(S, S, S),
@@ -230,8 +228,7 @@ func TestForest(t *testing.T) {
 		)
 
 		p := parser.New(g)
-		input := []*lexrule.String{b, b, b}
-		RunParse(t, p, input)
+		RunParse(t, p, b, b, b)
 
 		/*
 			(S, 0, 3) -> (S, 0, 2) (S, 2, 3)
@@ -277,8 +274,8 @@ func TestForest(t *testing.T) {
 		A := grammar.NewNonTerminal("A")
 		T := grammar.NewNonTerminal("T")
 		B := grammar.NewNonTerminal("B")
-		a := lexrule.NewString("a")
-		b := lexrule.NewString("b")
+		a := grammar.NewStringLexerRule("a")
+		b := grammar.NewStringLexerRule("b")
 		productions := []*grammar.Production{
 			grammar.NewProduction(S, A, T),
 			grammar.NewProduction(S, a, T),
@@ -289,8 +286,7 @@ func TestForest(t *testing.T) {
 		}
 		g := grammar.New(S, productions...)
 		p := parser.New(g)
-		input := []*lexrule.String{a, b, b, b}
-		RunParse(t, p, input)
+		RunParse(t, p, a, b, b, b)
 
 		root, ok := p.GetForestRoot()
 		require.True(t, ok)
@@ -333,8 +329,8 @@ func TestForest(t *testing.T) {
 		T := grammar.NewNonTerminal("T")
 		F := grammar.NewNonTerminal("F")
 		A := grammar.NewNonTerminal("A")
-		pipe := lexrule.NewString("|")
-		a := lexrule.NewString("a")
+		pipe := grammar.NewStringLexerRule("|")
+		a := grammar.NewStringLexerRule("a")
 
 		productions := []*grammar.Production{
 			grammar.NewProduction(R, E),
@@ -348,8 +344,7 @@ func TestForest(t *testing.T) {
 		}
 		g := grammar.New(R, productions...)
 		p := parser.New(g, parser.OptimizeRightRecursion(true))
-		input := []*lexrule.String{a, a, a, a}
-		RunParse(t, p, input)
+		RunParse(t, p, a, a, a, a)
 		root, ok := p.GetForestRoot()
 		require.True(t, ok)
 
@@ -408,7 +403,7 @@ func TestForest(t *testing.T) {
 
 	t.Run("leo 1", func(t *testing.T) {
 		A := grammar.NewNonTerminal("A")
-		a := lexrule.NewString("a")
+		a := grammar.NewStringLexerRule("a")
 
 		// A -> A 'a'
 		// A ->
@@ -419,7 +414,7 @@ func TestForest(t *testing.T) {
 
 		p := parser.New(g, parser.OptimizeRightRecursion(true))
 		for i := 0; i < 4; i++ {
-			tok := token.FromString("a", i, a.TokenType())
+			tok := TokenFromString("a", i, a.TokenType())
 			ok, err := p.Pulse(tok)
 			require.NoError(t, err, "loop %d", i)
 			require.True(t, ok, "loop %d", i)
@@ -433,9 +428,9 @@ func TestForest(t *testing.T) {
 	})
 }
 
-func RunParse(t *testing.T, p parser.Parser, input []*lexrule.String) {
+func RunParse(t *testing.T, p parser.Parser, input ...*grammar.StringLexerRule) {
 	for i, sym := range input {
-		tok := token.FromString(sym.Value, i, sym.TokenType())
+		tok := TokenFromString(sym.Value, i, sym.TokenType())
 		ok, err := p.Pulse(tok)
 		require.NoError(t, err)
 		require.True(t, ok)
@@ -452,7 +447,7 @@ func Intermediate(rule *grammar.DottedRule, origin, location int, alternatives .
 }
 
 func Token(rule grammar.LexerRule, origin, location int) *forest.Token {
-	return forest.NewToken(token.FromString(rule.String(), origin, rule.TokenType()), origin, location)
+	return forest.NewToken(TokenFromString(rule.String(), origin, rule.TokenType()), origin, location)
 }
 
 func Alternative(nodes ...forest.Node) forest.Group {
@@ -565,7 +560,7 @@ func ProductionEqual(t *testing.T, expected *grammar.Production, actual *grammar
 func TokenEqual(t *testing.T, expected, actual *forest.Token) {
 	require.Equal(t, expected.Location(), actual.Location(), "%s != %s", expected.String(), actual.String())
 	require.Equal(t, expected.Origin(), actual.Origin(), "%s != %s", expected.String(), actual.String())
-	require.Equal(t, expected.Token.Type(), actual.Token.Type(), "%s != %s", expected.String(), actual.String())
+	require.Equal(t, expected.Token.TokenType(), actual.Token.TokenType(), "%s != %s", expected.String(), actual.String())
 	require.Equal(t, expected.Token.Position(), actual.Token.Position(), "%s != %s", expected.String(), actual.String())
 }
 
@@ -582,4 +577,11 @@ func Edge(internal forest.Internal, nodes ...forest.Node) {
 	} else if len(nodes) == 1 {
 		internal.AddUniqueFamily(nodes[0], nil)
 	}
+}
+
+func TokenFromString(value string, position int, tokenType string) token.Token {
+	// create a lexer rule
+	lexRule := grammar.NewStringLexerRule(value)
+	// create a string token
+	return token.NewString(lexRule, position)
 }

@@ -1,4 +1,4 @@
-package lexeme
+package token
 
 type Span struct {
 	Offset int

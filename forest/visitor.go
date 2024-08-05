@@ -87,5 +87,5 @@ func (p *Printer) PrintInternal(i Internal) {
 }
 
 func (p *Printer) PrintToken(t *Token) {
-	fmt.Fprintf(p.writer, "(%s, %d, %d)", t.Token.Type(), t.Origin(), t.Location())
+	fmt.Fprintf(p.writer, "(%s, %d, %d)", t.Token.TokenType(), t.Origin(), t.Location())
 }

@@ -1,4 +1,4 @@
-package lexeme
+package token
 
 import (
 	"github.com/patrickhuber/go-earley/grammar"

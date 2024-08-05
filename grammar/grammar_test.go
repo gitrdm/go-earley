@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/patrickhuber/go-earley/grammar"
-	"github.com/patrickhuber/go-earley/lexrule"
 	"github.com/stretchr/testify/require"
 )
 
@@ -24,7 +23,7 @@ func TestGrammar(t *testing.T) {
 	
 	t.Run("right recursive", func(t *testing.T) {
 		A := grammar.NewNonTerminal("A")
-		a := lexrule.NewString("a")
+		a := grammar.NewStringLexerRule("a")
 
 		// A -> A 'a'
 		A_aA := grammar.NewProduction(A, a, A)

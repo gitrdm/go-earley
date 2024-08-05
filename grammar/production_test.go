@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/patrickhuber/go-earley/grammar"
-	"github.com/patrickhuber/go-earley/lexrule"
 	"github.com/stretchr/testify/require"
 )
 
@@ -33,7 +32,7 @@ func RunProductionTest(action func(production *grammar.Production)) {
 	leftHandSide := grammar.NewNonTerminal("S")
 	rightHandSide := []grammar.Symbol{
 		grammar.NewNonTerminal("S"),
-		lexrule.NewString("S"),
+		grammar.NewStringLexerRule("S"),
 	}
 	production := grammar.NewProduction(leftHandSide, rightHandSide...)
 	action(production)

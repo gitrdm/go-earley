@@ -114,7 +114,7 @@ func (p *parser) scan(s *state.Normal, j int, tok token.Token) {
 	}
 
 	// skip scanning if the token type doesn't match
-	if lexRule.TokenType() != tok.Type() {
+	if lexRule.TokenType() != tok.TokenType() {
 		return
 	}
 

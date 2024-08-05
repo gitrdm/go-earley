@@ -3,7 +3,7 @@ package dfa
 import "github.com/patrickhuber/go-earley/grammar"
 
 const (
-	DfaType = "dfa"
+	LexerRuleType = "dfa"
 )
 
 func NewDfa(start *State, tokenType string) *Dfa {
@@ -33,8 +33,8 @@ func (d Dfa) TokenType() string {
 	return d.tokenType
 }
 
-func (Dfa) Type() string {
-	return DfaType
+func (Dfa) LexerRuleType() string {
+	return LexerRuleType
 }
 
 func (d Dfa) String() string {

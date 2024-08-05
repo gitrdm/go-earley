@@ -1,11 +1,12 @@
 package scanner
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/patrickhuber/go-earley/grammar"
-	"github.com/patrickhuber/go-earley/lexeme"
 	"github.com/patrickhuber/go-earley/parser"
+	"github.com/patrickhuber/go-earley/token"
 )
 
 type Scanner interface {
@@ -22,14 +23,18 @@ type scanner struct {
 	line     int
 	column   int
 	parser   parser.Parser
-	lexemes  []lexeme.Lexeme
+	lexemes  []token.Lexeme
 	input    string
 	reader   *strings.Reader
-	registry map[string]lexeme.Factory
+	registry map[string]token.Factory
 }
 
 // New creates a new scanner from the given parser and io reader
 func New(p parser.Parser, input string) Scanner {
+	registry := map[string]token.Factory{
+		grammar.StringLexerRuleType:   token.NewStringFactory(),
+		grammar.TerminalLexerRuleType: token.NewTerminalFactory(),
+	}
 	return &scanner{
 		parser:   p,
 		position: -1,
@@ -37,6 +42,7 @@ func New(p parser.Parser, input string) Scanner {
 		column:   0,
 		input:    input,
 		reader:   strings.NewReader(input),
+		registry: registry,
 	}
 }
 
@@ -138,7 +144,7 @@ func (s *scanner) matchesExistingLexemes(ch rune) bool {
 	if len(s.lexemes) == 0 {
 		return false
 	}
-	var matched []lexeme.Lexeme
+	var matched []token.Lexeme
 	for _, lexeme := range s.lexemes {
 		if lexeme.Scan(ch) {
 			matched = append(matched, lexeme)
@@ -182,9 +188,10 @@ func (s *scanner) matchLexerRules(ch rune, lexerRules []grammar.LexerRule) (bool
 			continue
 		}
 
-		factory, ok := s.registry[lexerRule.Type()]
+		// detect invalid lexer rule types
+		factory, ok := s.registry[lexerRule.LexerRuleType()]
 		if !ok {
-			continue
+			return false, fmt.Errorf("unregistered lexer rule type %s", lexerRule.LexerRuleType())
 		}
 
 		tok, err := factory.Create(lexerRule, s.input, s.position)

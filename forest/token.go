@@ -27,7 +27,7 @@ func (t Token) Origin() int { return t.origin }
 func (t Token) Location() int { return t.location }
 
 func (t Token) String() string {
-	return fmt.Sprintf("(%s, %d, %d)", t.Token.Type(), t.origin, t.location)
+	return fmt.Sprintf("(%s, %d, %d)", t.Token.TokenType(), t.origin, t.location)
 }
 
 func (t *Token) Accept(v Visitor) {

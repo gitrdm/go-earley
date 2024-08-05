@@ -1,11 +1,10 @@
-package lexeme
+package token
 
 import (
 	"fmt"
 
 	"github.com/patrickhuber/go-collections/generic/queue"
 	"github.com/patrickhuber/go-earley/grammar"
-	"github.com/patrickhuber/go-earley/lexrule"
 )
 
 type stringFactory struct {
@@ -13,16 +12,16 @@ type stringFactory struct {
 }
 
 // Create implements Factory.
-func (f *stringFactory) Create(lexerRule grammar.LexerRule, str string, offset int) (Lexeme, error) {
-	rule, ok := lexerRule.(*lexrule.String)
-	if !ok || lexerRule.Type() != lexrule.StringType {
-		return nil, fmt.Errorf("string factory expected lexer rule of type %s but found %s", lexrule.StringType, lexerRule.Type())
+func (f *stringFactory) Create(lexerRule grammar.LexerRule, str string, position int) (Lexeme, error) {
+	rule, ok := lexerRule.(*grammar.StringLexerRule)
+	if !ok || lexerRule.LexerRuleType() != grammar.StringLexerRuleType {
+		return nil, fmt.Errorf("string factory expected lexer rule of type %s but found %s", grammar.StringLexerRuleType, lexerRule.LexerRuleType())
 	}
 	if f.queue.Length() == 0 {
-		return NewString(rule, offset), nil
+		return NewString(rule, position), nil
 	}
 	reused := f.queue.Dequeue()
-	reused.Reset(offset)
+	reused.Reset(position)
 	return reused, nil
 }
 
@@ -36,7 +35,7 @@ func (f *stringFactory) Free(lexeme Lexeme) error {
 }
 
 func (f *stringFactory) Type() string {
-	return lexrule.StringType
+	return grammar.StringLexerRuleType
 }
 
 func NewStringFactory() Factory {

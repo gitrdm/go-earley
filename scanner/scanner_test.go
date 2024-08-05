@@ -5,24 +5,24 @@ import (
 
 	"github.com/patrickhuber/go-earley/forest"
 	"github.com/patrickhuber/go-earley/grammar"
-	"github.com/patrickhuber/go-earley/lexrule"
 	"github.com/patrickhuber/go-earley/parser"
 	"github.com/patrickhuber/go-earley/scanner"
 	"github.com/patrickhuber/go-earley/terminal"
+
 	"github.com/patrickhuber/go-earley/token"
 	"github.com/stretchr/testify/require"
 )
 
 func TestScanner(t *testing.T) {
 	t.Run("reads input", func(t *testing.T) {
-		scanner := NewScanner(" ", NewFakeParser(lexrule.NewTerminal(terminal.NewWhitespace())))
+		scanner := NewScanner(" ", NewFakeParser(grammar.NewTerminalLexerRule(terminal.NewWhitespace())))
 		result, err := scanner.Read()
 		require.NoError(t, err)
 		require.True(t, result)
 		require.True(t, scanner.EndOfStream())
 	})
 	t.Run("updates position", func(t *testing.T) {
-		scanner := NewScanner(" ", NewFakeParser(lexrule.NewTerminal(terminal.NewWhitespace())))
+		scanner := NewScanner(" ", NewFakeParser(grammar.NewTerminalLexerRule(terminal.NewWhitespace())))
 		require.Equal(t, -1, scanner.Position())
 		result, err := scanner.Read()
 		require.NoError(t, err)
@@ -31,9 +31,9 @@ func TestScanner(t *testing.T) {
 	})
 	t.Run("resets column", func(t *testing.T) {
 		parser := NewFakeParser(
-			lexrule.NewString("test"),
-			lexrule.NewString("\n"),
-			lexrule.NewString("file"),
+			grammar.NewStringLexerRule("test"),
+			grammar.NewStringLexerRule("\n"),
+			grammar.NewStringLexerRule("file"),
 		)
 		scanner := NewScanner("test\nfile", parser)
 		for {
@@ -67,7 +67,7 @@ func NewFakeParser(rules ...grammar.LexerRule) parser.Parser {
 	}
 }
 
-func (p *FakeParser) Pulse(tokens token.Token) (bool, error) {
+func (p *FakeParser) Pulse(tok token.Token) (bool, error) {
 	if p.index >= len(p.rules) {
 		return false, nil
 	}
