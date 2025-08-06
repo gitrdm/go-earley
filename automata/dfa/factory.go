@@ -19,7 +19,7 @@ func (f *Factory) Create(lexerRule grammar.LexerRule, str string, offset int) (t
 		return nil, fmt.Errorf("dfa factory expected lexer rule of type %s but found %s", LexerRuleType, lexerRule.LexerRuleType())
 	}
 	if f.queue.Length() == 0 {
-		return NewLexeme(rule), nil
+		return NewLexeme(rule, offset), nil
 	}
 	panic("unimplemented")
 }

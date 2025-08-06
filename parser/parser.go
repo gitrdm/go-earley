@@ -14,7 +14,7 @@ type Parser interface {
 	Expected() []grammar.LexerRule
 	Accepted() bool
 	Location() int
-	Pulse(tok token.Token) (bool, error)
+	Pulse(tok ...token.Token) (bool, error)
 	GetForestRoot() (forest.Node, bool)
 }
 
@@ -75,10 +75,12 @@ func (p *parser) newState(production *grammar.Production, position int, origin i
 	return state.NewNormal(rule, origin)
 }
 
-func (p *parser) Pulse(tok token.Token) (bool, error) {
+func (p *parser) Pulse(tok ...token.Token) (bool, error) {
 	fmt.Printf("--------- %d ---------", p.location+1)
 	fmt.Println()
-	p.scanPass(p.Location(), tok)
+	for _, t := range tok {
+		p.scanPass(p.Location(), t)
+	}
 
 	tokenRecognized := len(p.chart.Sets) > p.Location()+1
 	if !tokenRecognized {

@@ -50,3 +50,7 @@ func (s *String) Scan(ch rune) bool {
 func (s *String) TokenType() string {
 	return s.rule.TokenType()
 }
+
+func (s *String) LexerRule() grammar.LexerRule {
+	return s.rule
+}

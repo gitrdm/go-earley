@@ -168,8 +168,46 @@ func (s *scanner) tryParseExistingLexemes() bool {
 			i++
 			continue
 		}
+		// move unaccepted lexemes to the end of the list
+		if i < size-1 {
+			s.lexemes[i] = s.lexemes[size-1]
+			s.lexemes[size-1] = tok
+		}
+		size--
 	}
-	return false
+
+	// if no matches, return
+	anyMatches := size > 0
+	if !anyMatches {
+		return false
+	}
+
+	// reclaim the lexemes
+	i = len(s.lexemes) - 1
+	for i >= size {
+		s.freeLexeme(s.lexemes[i])
+		s.lexemes = s.lexemes[:i]
+		i--
+	}
+
+	// coerce the lexemes into tokens
+	// TODO: check if it is better to just use lexemes directly
+	tokens := make([]token.Token, size)
+	for i := 0; i < size; i++ {
+		tokens[i] = s.lexemes[i]
+	}
+
+	ok, err := s.parser.Pulse(tokens...)
+	if err != nil {
+		return false
+	}
+	if !ok {
+		return false
+	}
+
+	clear(s.lexemes)
+
+	return true
 }
 
 func (s *scanner) anyExistingLexemes() bool {
@@ -199,7 +237,7 @@ func (s *scanner) matchLexerRules(ch rune, lexerRules []grammar.LexerRule) (bool
 			return false, err
 		}
 		if !tok.Scan(ch) {
-			err = factory.Free(tok)
+			err = s.freeLexeme(tok)
 			if err != nil {
 				return false, err
 			}
@@ -209,6 +247,15 @@ func (s *scanner) matchLexerRules(ch rune, lexerRules []grammar.LexerRule) (bool
 		anyMatches = true
 	}
 	return anyMatches, nil
+}
+
+func (s *scanner) freeLexeme(lexeme token.Lexeme) error {
+	lexerRuleType := lexeme.LexerRule().LexerRuleType()
+	factory, ok := s.registry[lexerRuleType]
+	if !ok {
+		return fmt.Errorf("unregistered lexer rule type %s", lexerRuleType)
+	}
+	return factory.Free(lexeme)
 }
 
 func (s *scanner) isEndOfLineCharacter(ch rune) bool {

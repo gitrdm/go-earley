@@ -35,7 +35,7 @@ func TestParser(t *testing.T) {
 				t.Fatal(err)
 			}
 			if !reflect.DeepEqual(test.expected, result) {
-				t.Fatal(err)
+				t.Fatalf("expected: %v, got: %v", test.expected, result)
 			}
 		})
 	}

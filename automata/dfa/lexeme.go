@@ -1,14 +1,19 @@
 package dfa
 
+import "github.com/patrickhuber/go-earley/grammar"
+
 type Lexeme struct {
-	d       *Dfa
-	current *State
+	dfa      *Dfa
+	current  *State
+	position int
 }
 
-func NewLexeme(d *Dfa) *Lexeme {
+// NewLexeme creates a new Lexeme for the given DFA and position.
+func NewLexeme(dfa *Dfa, position int) *Lexeme {
 	return &Lexeme{
-		d:       d,
-		current: d.Start,
+		dfa:      dfa,
+		current:  dfa.Start,
+		position: position,
 	}
 }
 
@@ -24,4 +29,16 @@ func (l *Lexeme) Scan(ch rune) bool {
 		}
 	}
 	return false
+}
+
+func (l *Lexeme) LexerRule() grammar.LexerRule {
+	return l.dfa
+}
+
+func (l *Lexeme) Position() int {
+	return l.position
+}
+
+func (l *Lexeme) TokenType() string {
+	return l.dfa.TokenType()
 }

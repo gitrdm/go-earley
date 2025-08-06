@@ -67,7 +67,7 @@ func NewFakeParser(rules ...grammar.LexerRule) parser.Parser {
 	}
 }
 
-func (p *FakeParser) Pulse(tok token.Token) (bool, error) {
+func (p *FakeParser) Pulse(tok ...token.Token) (bool, error) {
 	if p.index >= len(p.rules) {
 		return false, nil
 	}
