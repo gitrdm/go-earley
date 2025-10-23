@@ -901,7 +901,249 @@ type_of(BinOp, T) :-
 5. **PoC**: Load HCL grammar, generate parser tables, parse calculator expressions
 6. **Benchmark**: Compare HCL vs PDL loading time; optimize if needed
 7. **Review**: Iterate on HCL schema with early feedback
-8. **Merge**: Roll out incremental PRs—Grammar-IR core, HCL mapper, PDL refactor, Kanren, Z3, Datalog
+8. **Merge**: Roll out incremental PRs—Grammar-IR core, HCL mapper, PDL refactor, Kanren, Z3, Prolog
+
+---
+
+## 8. TLA+ Modeling Roadmap
+
+### Goals
+- Validate high-risk design decisions before implementation
+- Prove core invariants hold across all importers and format conversions
+- Define error handling for ambiguous/invalid cases
+- Build confidence in novel integration points (miniKanren, Z3, Prolog)
+- Document verified properties for future maintainers
+
+### Scope (What to Model)
+
+**In Scope:**
+- ✅ Grammar-IR well-formedness and metadata preservation
+- ✅ Integration with existing go-earley parser API
+- ✅ Pipeline composition and error handling
+- ✅ Extensibility pattern (metadata namespace isolation)
+
+**Out of Scope:**
+- ❌ External library behavior (HCL parsing, Z3 solving, Prolog evaluation)
+- ❌ Performance characteristics (TLA+ is for correctness)
+- ❌ Algorithmic correctness of Earley parser (already proven in literature)
+- ❌ Complete miniKanren implementation (too large, implementation detail)
+
+### Phase 1: Grammar-IR Core (Week 1, ~40 hours)
+
+**Spec**: `irexpress_design/specs/GrammarIR.tla`
+
+**Models**:
+- Core types: `Symbol`, `Production`, `Grammar`
+- Metadata as function: `Symbol -> [String -> Value]`
+- Well-formedness predicate: `WellFormed(grammar)`
+- Importer interface: `Import(externalFormat) -> Grammar`
+
+**Properties to Prove**:
+1. **Symbol Reference Validity**: All RHS symbols exist in `grammar.symbols`
+   ```tla
+   SymbolsValid(g) == 
+     \A p \in g.productions: 
+       \A s \in p.rhs: s \in g.symbols
+   ```
+
+2. **Start Symbol Exists**: Start symbol is declared and non-terminal
+   ```tla
+   StartSymbolValid(g) ==
+     /\ g.start \in g.symbols
+     /\ g.start \in NonTerminals
+   ```
+
+3. **Metadata Preservation**: Round-trip through formats preserves all metadata
+   ```tla
+   RoundTrip(g) ==
+     LET json == ToJSON(g)
+         g2 == FromJSON(json)
+     IN g2.metadata = g.metadata
+   ```
+
+4. **Invalid Imports Fail**: Malformed external formats cannot create well-formed Grammar-IR
+   ```tla
+   InvalidImportsFail ==
+     \A ext \in InvalidExternalFormats:
+       ~WellFormed(Import(ext))
+   ```
+
+**Exit Criteria**: 
+- TLC model-checks all properties without violations (state space < 10^8 states)
+- All invariants pass with realistic grammar examples (calculator, expression)
+
+### Phase 2: Integration Constraints (Week 2, ~40 hours)
+
+**Spec**: `irexpress_design/specs/GrammarIRIntegration.tla`
+
+**Models**:
+- Existing `grammar.Grammar` API surface from go-earley
+- Refinement mapping: `GrammarIRToExisting(grammarIR) -> grammar.Grammar`
+- Computed properties: nullable set, right-recursive set, rule registry
+
+**Properties to Prove**:
+1. **Nullable Computation**: Nullable set is computable from productions alone
+   ```tla
+   NullableComputable(gir) ==
+     LET nullable == ComputeNullable(gir.productions)
+         existing == ExistingNullable(GrammarIRToExisting(gir))
+     IN nullable = existing
+   ```
+
+2. **Right-Recursive Computation**: Can identify right-recursive productions
+   ```tla
+   RightRecursiveComputable(gir) ==
+     LET rr == ComputeRightRecursive(gir.productions)
+         existing == ExistingRightRecursive(GrammarIRToExisting(gir))
+     IN rr = existing
+   ```
+
+3. **API Completeness**: Grammar-IR supports all existing parser operations
+   ```tla
+   SupportsExistingAPI(gir) ==
+     /\ CanComputeRulesFor(gir)       \* RulesFor(NonTerminal)
+     /\ CanComputeStartProductions(gir) \* StartProductions()
+     /\ CanComputeNullable(gir)       \* IsTransitiveNullable(Symbol)
+     /\ CanComputeRightRecursive(gir) \* IsRightRecursive(Production)
+   ```
+
+4. **Test Case Compatibility**: Existing test cases pass with Grammar-IR
+   ```tla
+   ExistingTestsPass ==
+     /\ TransitiveNullTest     \* from grammar_test.go
+     /\ RightRecursiveTest     \* from grammar_test.go
+   ```
+
+**Exit Criteria**: 
+- Refinement mapping verified correct
+- All existing test patterns provably supported
+
+### Phase 3: Pipeline Composition (Week 3, ~40 hours)
+
+**Spec**: `irexpress_design/specs/Pipeline.tla`
+
+**Models**:
+- Pipeline stages: `Parser -> SPPF -> miniKanren -> Z3 -> Prolog -> App`
+- Data flow: `SPPF -> Set(AST) -> Set(ValidAST) -> Facts -> Result`
+- Error states: empty sets at each stage
+- Ambiguity: multiple ASTs persisting through stages
+
+**Properties to Prove**:
+1. **Extraction Completeness**: Non-empty SPPF produces at least one AST
+   ```tla
+   ExtractionCompleteness ==
+     \A sppf \in ValidSPPF:
+       sppf # {} => MiniKanren(sppf) # {}
+   ```
+
+2. **Constraint Filtering**: Z3 never creates ASTs, only filters
+   ```tla
+   Z3OnlyFilters ==
+     \A asts \in Set(AST):
+       Z3Validate(asts) \subseteq asts
+   ```
+
+3. **Error Reporting**: All failure modes have defined error messages
+   ```tla
+   ErrorsWellDefined ==
+     /\ Z3Validate(asts) = {} => ReportConstraintViolation
+     /\ MiniKanren(sppf) = {} => ReportExtractionFailure
+     /\ ParseError => ReportSyntaxError
+   ```
+
+4. **Zero-Cost Empty Rules**: Empty Prolog rules don't execute queries
+   ```tla
+   EmptyRulesNoOp ==
+     \A ast \in AST:
+       PrologRules = {} => PrologAnalyze(ast, {}) = EmptyFacts
+   ```
+
+5. **Pipeline Never Stuck**: Every state transitions to output or error
+   ```tla
+   PipelineTerminates ==
+     []<>(Output \/ Error)  \* Eventually reaches terminal state
+   ```
+
+**Exit Criteria**: 
+- All error paths defined and tested
+- Ambiguity resolution strategy proven correct
+- Empty/no-op optimizations verified
+
+### Decision Point (End of Week 3)
+
+**If no issues found:**
+- Proceed to implementation with confidence
+- Use TLA+ specs as living documentation
+- Reference proven properties in code comments
+
+**If issues found:**
+- Document design flaws discovered
+- Iterate on design (estimate 1-2 weeks)
+- Re-model affected areas
+- Do NOT proceed to implementation until properties pass
+
+### Phase 4: Extensibility Properties (Optional - Week 4, if needed)
+
+**Spec**: `irexpress_design/specs/Extensibility.tla`
+
+**Models**:
+- Metadata namespace system
+- Tool isolation via prefixes
+- Schema stability over tool additions
+
+**Properties to Prove**:
+1. **Namespace Isolation**: Tool metadata doesn't affect other tools
+   ```tla
+   NamespaceIsolation ==
+     \A t1, t2 \in Tools:
+       t1 # t2 => metadata[t1.*] \cap metadata[t2.*] = {}
+   ```
+
+2. **N Tools Without Struct Changes**: Adding tools doesn't require Go changes
+   ```tla
+   NoStructChanges ==
+     \A n \in 1..10:  \* Prove for 10 new tools
+       AddNTools(n) => GrammarIRSchema = OriginalSchema
+   ```
+
+3. **Serialization Preserves Metadata**: All namespaces survive round-trips
+   ```tla
+   AllNamespacesPreserved ==
+     \A ns \in Namespaces:
+       RoundTrip(g).metadata[ns] = g.metadata[ns]
+   ```
+
+**Exit Criteria**: Mathematical proof that extensibility pattern scales
+
+### Success Metrics
+
+- **Coverage**: 3-4 TLA+ specs covering all high-risk areas
+- **Properties**: 12-15 key properties formally verified
+- **Bugs Found**: Design flaws caught before writing Go code (target: 2-5 issues)
+- **Confidence**: Team comfortable proceeding to implementation
+- **Documentation**: Specs serve as formal documentation for future maintainers
+
+### Tools & Resources
+
+- **TLA+ Toolbox**: Version 2.19 (already installed at `~/tla2tools.jar`)
+- **VS Code Extension**: TLA+ (alygin.vscode-tlaplus) for syntax highlighting
+- **Model Checker**: TLC with multi-threading enabled
+- **Reference Book**: "Practical TLA+" by Hillel Wayne (available online)
+- **Community**: TLA+ users group (groups.google.com/g/tlaplus) for questions
+- **Examples**: TLA+ examples repository (github.com/tlaplus/Examples)
+
+### Integration with Implementation Plan
+
+TLA+ modeling runs **in parallel** with early implementation phases:
+
+```
+Weeks 1-2: Grammar-IR Core Implementation + TLA+ Phase 1
+Week 3:    Parser Integration + TLA+ Phase 2
+Week 4:    Continue Implementation + TLA+ Phase 3
+Week 5:    Kanren/Z3/Prolog (only if TLA+ passed)
+```
+
+**Critical path**: TLA+ Phase 3 must complete before Week 5 implementation starts.
 
 ---
 
